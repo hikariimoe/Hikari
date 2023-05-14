@@ -13,7 +13,8 @@ completion_prompt = [
     "These are the only actions you can perform, or will see in the chatroom:",
     "1. \"search_web\" - { \"action\": \"search_web\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to search on\" } }",
     "2. \"web_response\" - { \"action\": \"web_response\", \"parameters\": { \"html\": \"the html of the website you had just searched\" } }",
+    "3. \"upload_image\" - { \"action\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }",
     "",
     "You should only respond in the provided JSON format as entailed below:",
-    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message\", \"action\": \"your action to perform in the format above, or null\" }",
+    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or undefined\", \"action\": \"your action to perform in the format above, or undefined\" }",
 ]
