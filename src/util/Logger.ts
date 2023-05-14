@@ -33,7 +33,6 @@ export class Logger extends BuiltinLogger {
 
         const formatter = this.formats.get(level) ?? this.formats.get(this.level)!;
 
-
         console.log(this.preprocess(formatter, values));
     }
 
@@ -59,7 +58,7 @@ export class Logger extends BuiltinLogger {
 
             format = format.replace("{title}", mainValue[0]);
         } else {
-            format = format.replace("{title}", "");
+            format = format.replace("{title}", "Bot");
         }
 
 
