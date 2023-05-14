@@ -15,5 +15,5 @@ completion_prompt = [
     "2. \"web_response\" - { \"action\": \"web_response\", \"parameters\": { \"html\": \"the html of the website you had just searched\" } }",
     "",
     "You should only respond in the provided JSON format as entailed below:",
-    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message\", \"action\": \"your action to perform in the format above\" }",
+    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message\", \"action\": \"your action to perform in the format above, or null\" }",
 ]
