@@ -20,29 +20,10 @@ export class Hikari extends SapphireClient {
     }
 
     async login(_?: string) {
+        // Create the agent.
         await this.agent.attemptSetProxy();
-
         this.agent.create();
 
-        const completion = await this.agent.ai?.createChatCompletion({
-            model: "gpt-3.5-turbo",
-            messages: [{
-                role: "system",
-                content: this.agent.prompt
-            },
-            {
-                role: "user",
-                content: JSON.stringify({
-                    username: "Irisu",
-                    text: "could you search up the definition of the word owo for me?"
-                })
-            }]
-        });
-
-        console.log(completion?.data.choices);
-
-        return "e";
-
-        //return super.login(token);
+        return super.login(this.configuration.bot.token);
     }
 }

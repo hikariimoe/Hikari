@@ -4,6 +4,9 @@ import fs from "fs";
 import { HikariTomlOptions } from "./src/util/Constants";
 import { GatewayIntentBits } from "discord.js";
 
+// Plugins
+import "./src/plugins/register";
+
 // MAIN ASYNC LOOP
 // ESM modules support top-level await,
 // but we are not using them because
