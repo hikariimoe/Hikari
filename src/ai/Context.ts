@@ -108,6 +108,7 @@ export class Context {
 
             if (instructionHandler) {
                 this.events.add(event);
+                this.events.add(json as ContextEvent);
                 
                 const postEvent = await instructionHandler.handle(json as ContextEvent, this);
 
