@@ -1,4 +1,4 @@
-import { Command, CommandOptions, PieceContext } from "@sapphire/framework";
+import { Args, Command, CommandOptions, PieceContext } from "@sapphire/framework";
 
 export class HikariCommand<PreParseReturn = Args, O extends HikariComandOptions = HikariComandOptions> extends Command<PreParseReturn, O> {
     constructor(context: PieceContext, options: O = {} as O) {
