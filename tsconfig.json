@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "module": "commonjs",
+        "target": "esnext",
+        "strict": true,
+        "declaration": true,
+        "esModuleInterop": true,
+        "removeComments": true,
+        "noImplicitAny": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": [
+        "src/**/*.ts",
+    ],
+    "files": [
+        "types/pieces.d.ts"
+    ]
+}

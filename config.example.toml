@@ -1,0 +1,67 @@
+### HIKARI - BOT OPTIONS
+# These are all the configurable options, to ensure the bot is as
+# expansive and extendable as possible; in case anyone other than
+# myself plans on using it for adamantly intriguing usecases.
+
+
+[bot]
+# Information about the bot, both in AI and in practical use.
+# On the base level, this consists of the bot's token, as well
+# as general information about it.
+token = ""
+intents = [
+    # Intents suck
+    "DirectMessageReactions",
+    "DirectMessages",
+    "GuildMembers",
+    "GuildMessageReactions",
+    "GuildMessages",
+    "Guilds",
+    "MessageContent"
+]
+
+# The highest level of logging, which is the most verbose and
+# detailed that the bot will output. This is useful for when
+# you are debugging the bot, or trying to find out what is
+# going wrong with it.
+
+# The levels are as follows:
+#   - Trace (most verbose, holds a lot of information!)
+#   - Debug
+#   - Info
+#   - Warning
+#   - Error
+#   - Fatal
+#   - None (least verbose)
+logging_level = "Info"
+
+[bot.information]
+bot_name = "Hikari"
+
+# This is the base prompt that the bot will use to generate
+# responses. You can use this to make the bot more personal,
+# or to make it more unique to your own usecase.
+
+# Allowed placeholders:
+#   - %bot_name% (the name of the bot)
+
+prompt = [
+    "You are %bot_name%, a bot that is able to talk to people and learn from them.",
+]
+
+
+[proxy]
+# Because we do not really like OpenAI, we use a proxy; as well
+# as the base service. Here, you can provide all of the unique
+# proxies that you prefer, including the base server itself.
+
+# You are also able to specify which model you would like to
+# use, but preferrably; gpt-4 is the best option.
+model = "gpt-3.5-turbo"
+
+# Certain proxies may log prompts and potential responses, so
+# you can disable logging to ensure your privacy is kept.
+no_loggers = true
+
+preferred_proxies = [
+]

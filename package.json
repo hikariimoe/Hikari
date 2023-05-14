@@ -1,0 +1,37 @@
+{
+  "name": "hikari",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "prisma:merge": "npx prisma-import -o \"schema.prisma\" -s prisma/**/*.prisma -f",
+    "prisma:generate": "npm run prisma:merge && npx prisma generate",
+    "prisma:studio": "npm run prisma:generate && npx prisma studio",
+    "prisma:migrate": "npm run prisma:generate && npx prisma migrate dev"
+  },
+  "keywords": [],
+  "author": "Irisu",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^4.14.0",
+    "@sapphire/framework": "^4.4.3",
+    "@sapphire/pieces": "^3.6.3",
+    "@sapphire/plugin-logger": "^3.0.4",
+    "@sapphire/utilities": "^3.11.2",
+    "chalk": "^4.1.2",
+    "cheerio": "^1.0.0-rc.12",
+    "discord.js": "^14.11.0",
+    "node-fetch": "^2.6.11",
+    "openai": "^3.2.1",
+    "prisma": "^4.14.0",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.1.4",
+    "@types/node-fetch": "^2.6.3",
+    "prisma-import": "^1.0.4",
+    "typescript": "^5.0.4"
+  }
+}
