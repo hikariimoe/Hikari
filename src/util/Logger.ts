@@ -84,6 +84,6 @@ export class Logger extends BuiltinLogger {
         const color = LoggerColors[level.toLowerCase() as keyof typeof LoggerColors];
         const bubbleColor = ErrorLevels.includes(level) ? "#ff6e6e" : "#6eff6e";
 
-        return `${chalk.hex(bubbleColor)("•")} ${chalk.bgHex(color).bold(` ${level.toUpperCase()} `)} {title} ${chalk.hex("#484a49").italic("{date}")} • ${chalk.hex("#fafafa")("{values}")}`;
+        return `${chalk.hex(bubbleColor)("•")} ${chalk.bgHex(color).bold(` ${level.toUpperCase()} `)} ${chalk.hex("#484a49").italic("{date}")} ${chalk.hex("#a4aefc")("{title}")} • ${chalk.hex("#fafafa")("{values}")}`;
     }
 }
