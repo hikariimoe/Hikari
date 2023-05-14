@@ -2,7 +2,7 @@
 
 import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits } from "discord.js";
+import { Message, PermissionFlagsBits, TextBasedChannel } from "discord.js";
 import { HikariListener } from "../src/structures/HikariListener";
 import { Events } from "../src/util/Events";
 
@@ -19,7 +19,6 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
             // Don't process messages from bots or webhooks.
             return;
         }
-
 
         // Process the message.
         await this.processMessage(message);
@@ -51,6 +50,14 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
             }
 
             return this.container.client.emit(Events.CommandRun, message, prefix);
+        }
+
+        /// AI HANDLER
+        const ctx = await this.container.client.agent.context(message.channel);
+        const event = await ctx?.handle(message);
+
+        if (event && event.text) {
+            message.channel.send(event.text)
         }
     }
 

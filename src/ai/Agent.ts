@@ -4,8 +4,10 @@ import toml from "toml";
 import type { Hikari } from "../Hikari";
 import { load } from "cheerio";
 import { Configuration, OpenAIApi } from "openai";
+import { TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
+import { Context } from "./Context";
 
-enum ProxyType {
+export enum ProxyType {
     Aicg
 }
 
@@ -16,25 +18,34 @@ export class Agent {
     /**
      * The client that instantiated this agent.
      */
-    private client: Hikari;
+    public client: Hikari;
 
     /**
      * The OpenAI API instance.
      */
     public ai?: OpenAIApi;
 
+    public name: string;
+
     /**
      * The configured prompt to use for the AI.
      */
     public prompt: string;
+
+    public model: string;
 
     /**
      * The configuration for the openai API.
      */
     public openaiConfig: Configuration;
 
+    public contexts: Map<TextBasedChannelResolvable, Context>;
+
     constructor(client: Hikari) {
         this.client = client;
+        this.contexts = new Map();
+        this.name = client.configuration.bot.information.bot_name;
+        this.model = client.configuration.proxy.model ?? "gpt-3.5-turbo";
 
         // Get the base prompts
         let tomlFile: any;
@@ -59,6 +70,32 @@ export class Agent {
     }
 
     /**
+     * Creates a context for this channel, or gets it if any exists.
+     * @param channel 
+     */
+    async context(channel: TextBasedChannelResolvable) {
+        let c = this.client.channels.resolve(channel);
+
+        if (!c) {
+            if (typeof channel == "string") {
+                c = await this.client.channels.fetch(channel)
+            } else {
+                c = channel; // lmao it's already a channel
+            }
+        }
+        
+        
+        let ctx = this.contexts.get(channel);
+        if (!this.contexts.has(channel)) {
+            ctx = new Context(this, c! as TextBasedChannel);
+
+            this.contexts.set(channel, ctx);
+        }
+ 
+        return ctx;
+    }
+
+    /**
      * Attempts to set the proxy that's best suited for the client.
      */
     async attemptSetProxy() {
@@ -80,7 +117,7 @@ export class Agent {
 
                 if (proxyData.config.promptLogging == "true") {
                     this.client.logger.warn(
-                        "Proxy",
+                        "Agent: Proxy",
                         this.client.logger.color.yellow(proxy),
                         "is logging prompts, which is very risky for the privacy of the users."
                     );
@@ -95,7 +132,7 @@ export class Agent {
                 const apiTest = await fetch(`${proxy}/api/v1`);
 
                 if (apiTest.status !== 404) {
-                    this.client.logger.error("Proxy", this.client.logger.color.yellow(proxy), "didn't return not found, so it's not a valid proxy.");
+                    this.client.logger.error("Agent: Proxy", this.client.logger.color.yellow(proxy), "didn't return not found, so it's not a valid proxy.");
                     continue;
                 }
 
@@ -111,10 +148,9 @@ export class Agent {
         }
 
         if (Object.keys(proxyTimes).length === 0) {
-            this.client.logger.fatal("No proxies were found to be valid. Please check your configuration.");
+            this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");
             process.exit(1);
         }
-
 
         let fastestProxy = Object.keys(proxyTimes).reduce((a, b) => proxyTimes[a].time < proxyTimes[b].time ? a : b);
 
@@ -126,12 +162,11 @@ export class Agent {
                 url = proxy.proxyData.endpoints.openai;
             }
 
-
             this.openaiConfig = new Configuration({
                 basePath: url,
             });
 
-            this.client.logger.info("Proxy", this.client.logger.color.yellow(fastestProxy), "was found to be the best proxy available, and will be used.");
+            this.client.logger.info("Agent: Proxy", this.client.logger.color.yellow(fastestProxy), "was found to be the best proxy available, and will be used.");
         }
     }
 
