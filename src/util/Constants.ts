@@ -5,6 +5,7 @@ export interface HikariTomlOptions {
         token: string;
         logging_level: string;
         intents: string[];
+        context_memory_limit: number;
         information: {
             bot_name: string;
             prompt: string[];

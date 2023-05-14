@@ -20,6 +20,9 @@ intents = [
     "MessageContent"
 ]
 
+# The limit to everything that can be retained in the memory of the bot.
+context_memory_limit=10
+
 # The highest level of logging, which is the most verbose and
 # detailed that the bot will output. This is useful for when
 # you are debugging the bot, or trying to find out what is
@@ -63,5 +66,4 @@ model = "gpt-3.5-turbo"
 # you can disable logging to ensure your privacy is kept.
 no_loggers = true
 
-preferred_proxies = [
-]
+preferred_proxies = []

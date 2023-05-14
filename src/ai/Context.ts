@@ -126,6 +126,21 @@ export class Context {
         this.events.add(event);
         this.events.add(json as ContextEvent);
 
+        if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
+            let toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit
+            
+            let removed = 0;
+            for (let event of this.events.values()) {
+                if (removed == toRemove) {
+                    break;
+                }
+
+                this.events.delete(event);
+
+                removed += 1;
+            }
+        }
+
         return json as ContextEvent;
     }
 
