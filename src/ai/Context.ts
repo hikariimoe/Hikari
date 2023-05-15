@@ -41,7 +41,7 @@ export class Context {
         }
 
         if (event.attempts == 0) {
-            this.agent.logger.debug("Agent: Handling context ", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message ", this.agent.logger.color.hex("#7dffbc")(message.id));
+            this.agent.logger.debug("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
             this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(event)));
         }
 
@@ -114,15 +114,23 @@ export class Context {
         this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "successfully generated.");
         this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
 
-        if (json.actions.length > 0) {
+        this.events.add(event);
+        this.events.add(json as ContextEvent);
+
+        if (Array.isArray(json.actions) && json.actions.length > 0) {
             this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had instructions attached to it");
             this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.actions)));
             this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
+            let sent = false;
 
             for (let action of json.actions) {
                 const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType == action.type);
 
                 if (instructionHandler) {
+                    if (sent == false) {
+                        sent = true;
+                        message.channel.send(json.text)
+                    }
                     this.agent.logger.trace("Agent: Proper instruction handler found.");
 
                     const postEvent = await instructionHandler.handle(message, action as Task, this);
@@ -132,17 +140,22 @@ export class Context {
                         this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
                         postEvent.attempts = 1;
                         await this.handle(message, postEvent);
+                    } else {
+                        this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");
                     }
+
+                    sent = true;
                 } else {
                     // Invalid action.
                     this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
                     this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(action)));
                 }
             }
-        }
 
-        this.events.add(event);
-        this.events.add(json as ContextEvent);
+            if (sent == true) {
+                return;
+            }
+        }
 
         if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
             let toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit
@@ -157,6 +170,10 @@ export class Context {
 
                 removed += 1;
             }
+        }
+        
+        if (json.text) {
+            message.channel.send(json.text);
         }
 
         return json as ContextEvent;

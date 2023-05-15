@@ -54,11 +54,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
 
         /// AI HANDLER
         const ctx = await this.container.client.agent.context(message.channel);
-        const event = await ctx?.handle(message);
-
-        if (event && event.text) {
-            message.channel.send(event.text)
-        }
+        await ctx?.handle(message);
     }
 
     private async canProcessMessage(message: Message) {

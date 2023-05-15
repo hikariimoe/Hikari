@@ -7,28 +7,30 @@ import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 
 const prisma = new PrismaClient();
 
-export class SaveMemoryInstruction extends Instruction {
+export class GetMemoryInstruction extends Instruction {
     constructor(context: Piece.Context, options: InstructionOptions) {
         super(context, {
             ...options,
-            taskType: TaskType.SaveMemory
+            taskType: TaskType.GetMemory
         })
     }
 
     async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
-        if (!event.parameters.data || !event.parameters.user) {
-            return undefined;
-        }
-
-        const memory = await prisma.memory.create({
-            data: {
-                channel_id: trigger.channel.id,
-                data: event.parameters
+        const memories = await prisma.memory.findMany({
+            where: {
+                channel_id: trigger.channel.id
             }
         });
 
-        console.log(memory)
-
-        return undefined;
+        return {
+            attempts: 0,
+            actions: [{
+                type: TaskType.MemoryData,
+                parameters: {
+                    query: event.parameters.query,
+                    memories
+                }
+            }]
+        };
     }
 }

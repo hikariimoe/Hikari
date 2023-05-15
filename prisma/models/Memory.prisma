@@ -1,6 +1,6 @@
 model Memory {
     id Int @id @default(autoincrement())
-    user_id String
+    channel_id String
     data Json
 
     @@map("memories")
