@@ -9,7 +9,7 @@ export interface ContextEvent {
     username?: string;
     thoughts?: string;
     attempts: number;
-    action?: Task;
+    actions?: Task[];
 }
 
 /**
@@ -36,7 +36,7 @@ export class Context {
                 text: message.content,
                 username: message.author.username,
                 attempts: 0,
-                action: this.parseMessage(message)
+                actions: this.parseMessage(message)
             };
         }
 
@@ -114,30 +114,32 @@ export class Context {
         this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "successfully generated.");
         this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
 
-        if (json.action) {
-            this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
-            this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
-            this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read it.");
+        if (json.actions.length > 0) {
+            this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had instructions attached to it");
+            this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.actions)));
+            this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
 
-            const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType == json.action.type);
+            for (let action of json.actions) {
+                const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType == action.type);
 
-            if (instructionHandler) {
-                this.agent.logger.trace("Agent: Proper instruction handler found.");
-                this.events.add(event);
-                this.events.add(json as ContextEvent);
+                if (instructionHandler) {
+                    this.agent.logger.trace("Agent: Proper instruction handler found.");
+                    this.events.add(event);
+                    this.events.add(json as ContextEvent);
 
-                const postEvent = await instructionHandler.handle(json as ContextEvent, this);
+                    const postEvent = await instructionHandler.handle(json as ContextEvent, this);
 
-                if (postEvent) {
-                    this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
-                    this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
-                    postEvent.attempts = 1;
-                    return this.handle(message, postEvent);
+                    if (postEvent) {
+                        this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
+                        this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
+                        postEvent.attempts = 1;
+                        return await this.handle(message, postEvent);
+                    }
+                } else {
+                    // Invalid action.
+                    this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
+                    this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(action)));
                 }
-            } else {
-                // Invalid action.
-                this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
-                this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
             }
         }
 
@@ -170,8 +172,10 @@ export class Context {
         }
     }
 
-    private parseMessage(message: Message): Task | undefined {
-        return undefined;
+    private parseMessage(message: Message): Task[] {
+        const actions: Task[] = [];
+
+        return actions;
     }
 
     private parse() {

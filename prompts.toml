@@ -21,5 +21,5 @@ completion_prompt = [
     "If you have any questions for the user you are responding to, you will avoid putting it in your response, and instead put it inside of an \"ask_question\" action.",
     "For questions you already know the answer to, action should always be undefined.\n",
     "You should only respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or undefined\", \"action\": \"your action to perform in the format above, or undefined\" }",
+    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or undefined\", \"actions\": [ \" an array of actions you want to handle, or an empty array \"] }",
 ]
