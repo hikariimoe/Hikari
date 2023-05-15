@@ -45,14 +45,14 @@ export class Agent {
         this.client = client;
         this.contexts = new Map();
         this.name = client.configuration.bot.information.bot_name;
-        this.model = client.configuration.proxy.model ?? "gpt-3.5-turbo";
+        this.model = client.configuration.proxy.model;
 
-        this.logger.debug("Agent: Initializing the agent...")
+        this.logger.debug("Agent: Initializing the agent...");
 
         // Get the base prompts
         let tomlFile: any;
         try {
-            this.logger.trace("Agent: Parsing prompts for the agent.")
+            this.logger.trace("Agent: Parsing prompts for the agent.");
             tomlFile = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
         } catch (e) {
             console.error("Failed to parse config.toml file.");
@@ -83,8 +83,8 @@ export class Agent {
         let c = this.client.channels.resolve(channel);
 
         if (!c) {
-            if (typeof channel == "string") {
-                c = await this.client.channels.fetch(channel)
+            if (typeof channel === "string") {
+                c = await this.client.channels.fetch(channel);
             } else {
                 c = channel; // lmao it's already a channel
             }
@@ -93,8 +93,8 @@ export class Agent {
         
         let ctx = this.contexts.get(channel);
         if (!this.contexts.has(channel)) {
-            this.logger.trace("Agent: Handling the creation of a context for", c?.id)
-            ctx = new Context(this, c! as TextBasedChannel);
+            this.logger.trace("Agent: Handling the creation of a context for", c?.id);
+            ctx = new Context(this, c as TextBasedChannel);
 
             this.contexts.set(channel, ctx);
         }
@@ -106,7 +106,7 @@ export class Agent {
      * Attempts to set the proxy that's best suited for the client.
      */
     async attemptSetProxy() {
-        let proxyTimes: Record<string, {
+        const proxyTimes: Record<string, {
             time: number;
             type: ProxyType;
             proxyData: any;
@@ -114,14 +114,14 @@ export class Agent {
 
         this.logger.trace("Agent: Attempting to set a usable proxy from the list of them.");
 
-        for (let proxy of this.client.configuration.proxy.preferred_proxies) {
+        for (const proxy of this.client.configuration.proxy.preferred_proxies) {
             this.logger.trace(
                 "Agent: Testing proxy",
                 this.client.logger.color.hex("#a7e5fa")(proxy),
                 "for viable use.."
             );
 
-            let start = Date.now();
+            const start = Date.now();
             const homepage = await fetch(proxy);
 
             if (homepage.status === 200) {
@@ -130,7 +130,7 @@ export class Agent {
 
                 const proxyData = JSON.parse($("body > pre").text());
 
-                if (proxyData.config.promptLogging == "true") {
+                if (proxyData.config.promptLogging === "true") {
                     this.client.logger.warn(
                         "Agent: Proxy",
                         this.client.logger.color.hex("#a7e5fa")(proxy),
@@ -151,35 +151,33 @@ export class Agent {
                     continue;
                 }
 
-                let end = Date.now();
+                const end = Date.now();
                 proxyTimes[proxy] = {
                     time: end - start,
                     type: ProxyType.Aicg, // TODO: Add proper proxy type detection
                     proxyData
-                }
+                };
             } else {
                 this.client.logger.error("Agent: Proxy", this.client.logger.color.hex("#a7e5fa")(proxy), "wasnt't found, so it's likely a dead link.");
             }
         }
         
-        this.logger.debug("Agent: Gathered a list of workable proxies.")
+        this.logger.debug("Agent: Gathered a list of workable proxies.");
         this.logger.debug("Agent: Proxy List Size:", Object.keys(proxyTimes).length);
-        this.logger.trace("Agent: Determining which one works the best for our usecases")
+        this.logger.trace("Agent: Determining which one works the best for our usecases");
 
         if (Object.keys(proxyTimes).length === 0) {
             this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");
             process.exit(1);
         }
 
-        let fastestProxy = Object.keys(proxyTimes).reduce((a, b) => proxyTimes[a].time < proxyTimes[b].time ? a : b);
+        const fastestProxy = Object.keys(proxyTimes).reduce((a, b) => proxyTimes[a].time < proxyTimes[b].time ? a : b);
 
         if (fastestProxy) {
             const proxy = proxyTimes[fastestProxy];
             
-            let url;
-            if (proxy.type === ProxyType.Aicg) {
-                url = proxy.proxyData.endpoints.openai;
-            }
+            // TODO: support proxy types
+            const url = proxy.proxyData.endpoints.openai;
 
             this.openaiConfig = new Configuration({
                 basePath: url,

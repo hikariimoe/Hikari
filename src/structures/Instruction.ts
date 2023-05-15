@@ -11,7 +11,7 @@ export abstract class Instruction<O extends InstructionOptions = InstructionOpti
         this.taskType = options.taskType ?? TaskType.Unknown;
     }
 
-    async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
+    async handle(_trigger: Message, _event: Task, _context: Context): Promise<ContextEvent | undefined> {
         return;
     }
 }

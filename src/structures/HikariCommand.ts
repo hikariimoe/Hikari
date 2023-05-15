@@ -10,6 +10,4 @@ export class HikariCommand<PreParseReturn = Args, O extends HikariComandOptions 
     }
 }
 
-export interface HikariComandOptions extends CommandOptions {
-
-}
+export type HikariComandOptions = CommandOptions

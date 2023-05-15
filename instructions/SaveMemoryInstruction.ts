@@ -12,10 +12,10 @@ export class SaveMemoryInstruction extends Instruction {
         super(context, {
             ...options,
             taskType: TaskType.SaveMemory
-        })
+        });
     }
 
-    async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
+    async handle(trigger: Message, event: Task, _context: Context): Promise<ContextEvent | undefined> {
         if (!event.parameters.data || !event.parameters.user) {
             return undefined;
         }
@@ -27,7 +27,7 @@ export class SaveMemoryInstruction extends Instruction {
             }
         });
 
-        console.log(memory)
+        console.log(memory);
 
         return undefined;
     }

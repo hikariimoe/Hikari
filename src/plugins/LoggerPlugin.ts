@@ -1,4 +1,4 @@
-import { Plugin, preGenericsInitialization, SapphireClient } from "@sapphire/framework";
+import { Plugin, SapphireClient, preGenericsInitialization } from "@sapphire/framework";
 import type { ClientOptions } from "discord.js";
 import { Hikari } from "../Hikari";
 import { Logger } from "../util/Logger";

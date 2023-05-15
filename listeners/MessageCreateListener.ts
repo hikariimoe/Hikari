@@ -2,7 +2,7 @@
 
 import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits, TextBasedChannel } from "discord.js";
+import { Message, PermissionFlagsBits, } from "discord.js";
 import { HikariListener } from "../src/structures/HikariListener";
 import { Events } from "../src/util/Events";
 
@@ -44,7 +44,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         }
 
         if (prefix) {
-            if (prefix?.length === message.content.length) {
+            if (prefix.length === message.content.length) {
                 // The message is just the prefix.
                 return;
             }
@@ -70,7 +70,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
 
         const self = await message.guild?.members.fetchMe();
 
-        if (!self || !message.channel.permissionsFor(self)?.has([
+        if (!self || !message.channel.permissionsFor(self).has([
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.ViewChannel
         ], true)) {

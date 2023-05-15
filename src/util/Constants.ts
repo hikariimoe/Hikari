@@ -1,5 +1,4 @@
 import { LogLevel } from "@sapphire/framework";
-import { LoggerFormatOptions } from "@sapphire/plugin-logger";
 
 export interface HikariTomlOptions {
     bot: {

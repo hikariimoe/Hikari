@@ -7,9 +7,10 @@ export class Util {
         }
 
         const ret: Record<keyof T, any> | undefined = deepClone(obj);
-        for (let key of Object.keys(obj)) {
+        for (const key of Object.keys(obj)) {
             if (keys.includes(key as K)) {
-                delete ret?.[key as keyof T];
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                delete ret[key as keyof T];
             }
         }
 

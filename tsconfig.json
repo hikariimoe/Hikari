@@ -12,8 +12,12 @@
     },
     "include": [
         "src/**/*.ts",
+        "listeners/**/*.ts",
+        "instructions/**/*.ts",
+        "commands/**/*.ts"
     ],
     "files": [
+        "bot.ts",
         "types/pieces.d.ts"
     ]
 }

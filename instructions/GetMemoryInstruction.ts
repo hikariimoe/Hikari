@@ -12,10 +12,10 @@ export class GetMemoryInstruction extends Instruction {
         super(context, {
             ...options,
             taskType: TaskType.GetMemory
-        })
+        });
     }
 
-    async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
+    async handle(trigger: Message, event: Task, _context: Context): Promise<ContextEvent | undefined> {
         const memories = await prisma.memory.findMany({
             where: {
                 channel_id: trigger.channel.id

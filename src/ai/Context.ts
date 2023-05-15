@@ -1,6 +1,6 @@
 import { Message, TextBasedChannel } from "discord.js";
 import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
-import { Task, TaskType } from "../structures/ai/Task";
+import { Task } from "../structures/ai/Task";
 import { Util } from "../util/Util";
 import { Agent } from "./Agent";
 
@@ -40,15 +40,15 @@ export class Context {
             };
         }
 
-        if (event.attempts == 0) {
+        if (event.attempts === 0) {
             this.agent.logger.debug("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
             this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(event)));
         }
 
         let role: ChatCompletionRequestMessageRoleEnum;
         if (!event.username) {
-            role = "system"
-        } else if (event.username == this.agent.name) {
+            role = "system";
+        } else if (event.username === this.agent.name) {
             role = "assistant";
         } else {
             role = "user";
@@ -58,8 +58,8 @@ export class Context {
         this.events.forEach((val) => {
             let eventRole: ChatCompletionRequestMessageRoleEnum;
             if (!val.username) {
-                eventRole = "system"
-            } else if (val.username == this.agent.name) {
+                eventRole = "system";
+            } else if (val.username === this.agent.name) {
                 eventRole = "assistant";
             } else {
                 eventRole = "user";
@@ -69,8 +69,8 @@ export class Context {
                 {
                     role: eventRole,
                     content: JSON.stringify(Util.omit(val, ["attempts"]))
-                })
-        })
+                });
+        });
 
         prompts.push({
             role: role,
@@ -102,11 +102,11 @@ export class Context {
         if (!json) {
             // Malformed json.
             // TODO: attempt a fix.
-            if (event.attempts == 0) {
+            if (event.attempts === 0) {
                 this.agent.client.logger.error("Couldn't properly handle a response to the message", this.agent.logger.color.hex("#7dffbc")(message.id), "so we will attempt doing so again.");
             }
 
-            this.agent.logger.trace("Agent: Attempt", this.agent.logger.color.hex("#ffcb7d")(event.attempts), "of 5 at fixing the json for message", this.agent.logger.color.hex("#7dffbc")(message.id))
+            this.agent.logger.trace("Agent: Attempt", this.agent.logger.color.hex("#ffcb7d")(event.attempts), "of 5 at fixing the json for message", this.agent.logger.color.hex("#7dffbc")(message.id));
 
             return this.handle(message, event);
         }
@@ -123,13 +123,13 @@ export class Context {
             this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
             let sent = false;
 
-            for (let action of json.actions) {
-                const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType == action.type);
+            for (const action of json.actions) {
+                const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType === action.type);
 
                 if (instructionHandler) {
-                    if (sent == false) {
+                    if (!sent) {
                         sent = true;
-                        message.channel.send(json.text)
+                        message.channel.send(json.text);
                     }
                     this.agent.logger.trace("Agent: Proper instruction handler found.");
 
@@ -152,17 +152,17 @@ export class Context {
                 }
             }
 
-            if (sent == true) {
+            if (sent) {
                 return;
             }
         }
 
         if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
-            let toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit
+            const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
 
             let removed = 0;
-            for (let event of this.events.values()) {
-                if (removed == toRemove) {
+            for (const event of this.events.values()) {
+                if (removed === toRemove) {
                     break;
                 }
 
@@ -181,13 +181,13 @@ export class Context {
 
     private tryParse(json?: string) {
         try {
-            return JSON.parse(json || "");
+            return JSON.parse(json ?? "");
         } catch (e) {
             return undefined;
         }
     }
 
-    private parseMessage(message: Message): Task[] {
+    private parseMessage(_message: Message): Task[] {
         const actions: Task[] = [];
 
         return actions;

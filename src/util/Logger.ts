@@ -10,15 +10,15 @@ export const LoggerColors = {
     error: "#ff9494",
     fatal: "#a34040",
     none: "#d6d6d6",
-}
+};
 
 export const ErrorLevels = [
     "Fatal",
     "Error"
-]
+];
 
 export class Logger extends BuiltinLogger {
-    public readonly formats: Map<LogLevel, string>
+    public readonly formats: Map<LogLevel, string>;
 
     public constructor(client: Hikari) {
         super(client.options.logger?.level ?? LogLevel.Info);
@@ -31,9 +31,9 @@ export class Logger extends BuiltinLogger {
             return;
         }
 
-        const formatter = this.formats.get(level) ?? this.formats.get(this.level)!;
+        const formatter = this.formats.get(level) ?? this.formats.get(this.level);
 
-        console.log(this.preprocess(formatter, values));
+        console.log(this.preprocess(formatter ?? "", values));
     }
 
     /**
@@ -76,7 +76,7 @@ export class Logger extends BuiltinLogger {
                     return [LogLevel[key as keyof typeof LogLevel], ""];
                 }
 
-                return [LogLevel[key as keyof typeof LogLevel], this.getFormatString(key as keyof typeof LogLevel)]
+                return [LogLevel[key as keyof typeof LogLevel], this.getFormatString(key as keyof typeof LogLevel)];
             }));
     }
 

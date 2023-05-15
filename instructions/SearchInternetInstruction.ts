@@ -9,10 +9,10 @@ export class SearchWebInstruction extends Instruction {
         super(context, {
             ...options,
             taskType: TaskType.SearchWeb
-        })
+        });
     }
 
-    async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
+    async handle(_trigger: Message, _event: Task, _context: Context): Promise<ContextEvent | undefined> {
         return;
     }
 }
