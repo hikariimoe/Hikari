@@ -1,3 +1,4 @@
+import { LogLevel } from "@sapphire/framework";
 import { LoggerFormatOptions } from "@sapphire/plugin-logger";
 
 export interface HikariTomlOptions {
@@ -17,4 +18,8 @@ export interface HikariTomlOptions {
         no_loggers: boolean;
         preferred_proxies: string[];
     };
+
+    logger: {
+        level: LogLevel;
+    }
 }
