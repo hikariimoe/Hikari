@@ -124,16 +124,14 @@ export class Context {
 
                 if (instructionHandler) {
                     this.agent.logger.trace("Agent: Proper instruction handler found.");
-                    this.events.add(event);
-                    this.events.add(json as ContextEvent);
 
-                    const postEvent = await instructionHandler.handle(json as ContextEvent, this);
+                    const postEvent = await instructionHandler.handle(message, action as Task, this);
 
                     if (postEvent) {
                         this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
                         this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
                         postEvent.attempts = 1;
-                        return await this.handle(message, postEvent);
+                        await this.handle(message, postEvent);
                     }
                 } else {
                     // Invalid action.
