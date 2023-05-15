@@ -47,9 +47,12 @@ export class Agent {
         this.name = client.configuration.bot.information.bot_name;
         this.model = client.configuration.proxy.model ?? "gpt-3.5-turbo";
 
+        this.logger.debug("Agent: Initializing the agent...")
+
         // Get the base prompts
         let tomlFile: any;
         try {
+            this.logger.trace("Agent: Parsing prompts for the agent.")
             tomlFile = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
         } catch (e) {
             console.error("Failed to parse config.toml file.");
@@ -58,8 +61,11 @@ export class Agent {
 
         this.prompt = `${this.client.configuration.bot.information.prompt.join(" ")}\n\n${tomlFile.completion_prompt.join(" ")}`;
         this.openaiConfig = new Configuration();
-        
         this.assignPromptValues();
+    }
+
+    get logger() {
+        return this.client.logger;
     }
 
     /**
@@ -83,7 +89,8 @@ export class Agent {
                 c = channel; // lmao it's already a channel
             }
         }
-        
+
+        this.logger.trace("Agent: Handling the creation of a context for", c?.id)
         
         let ctx = this.contexts.get(channel);
         if (!this.contexts.has(channel)) {
@@ -105,7 +112,15 @@ export class Agent {
             proxyData: any;
         }> = {};
 
+        this.logger.trace("Agent: Attempting to set a usable proxy from the list of them.");
+
         for (let proxy of this.client.configuration.proxy.preferred_proxies) {
+            this.logger.trace(
+                "Agent: Testing proxy",
+                this.client.logger.color.hex("#a7e5fa")(proxy),
+                "for viable use.."
+            );
+
             let start = Date.now();
             const homepage = await fetch(proxy);
 
@@ -118,7 +133,7 @@ export class Agent {
                 if (proxyData.config.promptLogging == "true") {
                     this.client.logger.warn(
                         "Agent: Proxy",
-                        this.client.logger.color.yellow(proxy),
+                        this.client.logger.color.hex("#a7e5fa")(proxy),
                         "is logging prompts, which is very risky for the privacy of the users."
                     );
 
@@ -132,7 +147,7 @@ export class Agent {
                 const apiTest = await fetch(`${proxy}/api/v1`);
 
                 if (apiTest.status !== 404) {
-                    this.client.logger.error("Agent: Proxy", this.client.logger.color.yellow(proxy), "didn't return not found, so it's not a valid proxy.");
+                    this.client.logger.error("Agent: Proxy", this.client.logger.color.hex("#a7e5fa")(proxy), "didn't return not found, so it's not a valid proxy.");
                     continue;
                 }
 
@@ -143,9 +158,13 @@ export class Agent {
                     proxyData
                 }
             } else {
-                console.log(homepage.status);
+                this.client.logger.error("Agent: Proxy", this.client.logger.color.hex("#a7e5fa")(proxy), "wasnt't found, so it's likely a dead link.");
             }
         }
+        
+        this.logger.debug("Agent: Gathered a list of workable proxies.")
+        this.logger.debug("Agent: Proxy List Size:", Object.keys(proxyTimes).length);
+        this.logger.trace("Agent: Determining which one works the best for our usecases")
 
         if (Object.keys(proxyTimes).length === 0) {
             this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");

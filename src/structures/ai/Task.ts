@@ -8,5 +8,5 @@ export enum TaskType {
 
 export interface Task {
     type: TaskType
-    parameters: any;
+    parameters?: any;
 }
