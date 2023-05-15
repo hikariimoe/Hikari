@@ -27,7 +27,8 @@ import "./src/plugins/register";
 
     // Create the client then login.
     const client = new Hikari({
-        intents: tomlFile.bot.intents.map((intent) => GatewayIntentBits[intent as keyof typeof GatewayIntentBits])
+        intents: tomlFile.bot.intents.map((intent) => GatewayIntentBits[intent as keyof typeof GatewayIntentBits]),
+        ...tomlFile
     }, tomlFile as HikariTomlOptions);
 
     await client.login();
