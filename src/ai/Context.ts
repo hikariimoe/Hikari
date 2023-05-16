@@ -173,7 +173,7 @@ export class Context {
         // Attempt to parse the json
         let json = this.tryParse(completion);
 
-        if (json.action == "undefined") {
+        if (typeof json.action === "string") {
             json.action = undefined;
         }
 
