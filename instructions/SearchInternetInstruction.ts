@@ -3,6 +3,7 @@ import { Message } from "discord.js";
 import { Context, ContextEvent } from "../src/ai/Context";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import google from "googlethis";
 
 export class SearchWebInstruction extends Instruction {
     constructor(context: Piece.Context, options: InstructionOptions) {
@@ -12,7 +13,18 @@ export class SearchWebInstruction extends Instruction {
         });
     }
 
-    async handle(_trigger: Message, _event: Task, _context: Context): Promise<ContextEvent | undefined> {
-        return;
+    async handle(_trigger: Message, event: Task, _context: Context): Promise<ContextEvent | undefined> {
+        const results = await google.search(event.parameters.query, {
+            page: 0,
+            parse_ads: false,
+        });
+
+        return {
+            attempts: 0,
+            action: {
+                type: TaskType.SearchResults,
+                parameters: JSON.parse(JSON.stringify(results)) // TODO: find a better way to destructure this
+            }
+        }
     }
 }
