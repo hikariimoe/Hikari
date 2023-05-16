@@ -1,8 +1,10 @@
 export enum TaskType {
     Unknown = "unknown",
     SearchWeb = "search_internet",
+    SearchImages = "search_images",
     SearchResults = "search_results",
-    WebsiteResponse = "website_response",
+    InternetResults = "internet_results",
+    ImageResults = "image_results",
     UploadImage = "upload_image",
     AskQuestion = "ask_question",
     SaveMemory = "save_memory",

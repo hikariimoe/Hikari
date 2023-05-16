@@ -15,7 +15,7 @@ export interface ContextEvent {
     action?: Task;
 }
 
-export const IgnoreTaskTypes: TaskType[] = [];
+export const IgnoreTaskTypes: TaskType[] = [TaskType.UploadImage];
 
 /**
  * An instance of a Discord channel, with context of everything that has happened in it.
@@ -242,6 +242,10 @@ export class Context {
                     return await this.handle(message, event);
                 }
 
+                if (json.includes("\n")) {
+                    json = json.split("\n")
+                }
+
                 if (Array.isArray(json)) {
                     // why is this even possible?
                     let objBuilder: any = {};
@@ -260,12 +264,34 @@ export class Context {
                 this.agent.logger.error("Agent: JSON repair apparently succeeded, continuing on.");
             } catch (err) {
                 this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
+                this.agent.logger.error("Agent: Malformed json:", this.agent.logger.color.hex("#7dffbc")(completion));
                 return undefined;
             }
         }
 
+        // Quick fixes because the AI can be really fucking stupid
         if (json.action && typeof json.action === "string") {
-            json.action = undefined;
+            if (json.action == "undefined") {
+                json.action = undefined;
+            } else {
+                if (json.parameters) {
+                    json.action = {
+                        type: json.action,
+                        parameters: json.parameters
+                    }
+
+                    delete json.parameters;
+                }
+            }
+        }
+
+        const urls = json.action?.parameters.url ?? json.action?.parameters.urls;
+        if (json.action?.type == "upload_image" && !urls) {
+            this.agent.logger.warn("Agent: The AI tried to upload an image(s), but it didn't provide any urls.");
+            this.agent.logger.debug("Agent: Action data:", this.agent.logger.color.hex("#ff7de3")(json.action));
+
+            this.handling = false;
+            return this.handle(message, event);
         }
 
         this.agent.logger.info("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
@@ -275,6 +301,11 @@ export class Context {
         this.events.add(json as ContextEvent);
 
         if (json.action) {
+            if (IgnoreTaskTypes.includes(json.action.type)) {
+                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it, but it was ignored.");
+                return;
+            }
+
             this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
             this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
             this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
@@ -359,7 +390,23 @@ export class Context {
             if (toEdit) {
                 toEdit.edit(content);
             } else {
-                message.reply(content);
+                const urls = json.action?.parameters.url ?? json.action?.parameters.urls;
+                if (urls) {
+                    this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has an image(s) attached to it, so we're sending it as a file.");
+                } 
+
+                await message.reply({
+                    content: content,
+                    files: json.action && urls ? urls.map((x: string) => {
+                        // get the file name out of the url
+                        const fileName = x.split("/").pop();
+
+                        return {
+                            attachment: x,
+                            name: fileName
+                        }
+                    }) : undefined
+                });
             }
         }
 

@@ -23,7 +23,7 @@ export class SearchWebInstruction extends Instruction {
         return {
             attempts: 0,
             action: {
-                type: TaskType.SearchResults,
+                type: TaskType.InternetResults,
                 parameters: Util.shrink(results)
             }
         }
