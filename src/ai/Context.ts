@@ -43,6 +43,7 @@ export class Context {
 
     async handleCompletion(prompts: ChatCompletionRequestMessage[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
         return await new Promise(async (resolve, reject) => {
+            this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
             let completionStream: any;
             try {
                 completionStream = await this.agent.ai?.createChatCompletion({
@@ -82,6 +83,7 @@ export class Context {
                 if (data.includes("queue")) {
                     // Well Fuck
                     if (sentQueueMessage == false && sendReply == true) {
+                        this.agent.logger.debug("Agent: Request has been enqueued, waiting for freedom before we can continue.");
                         queueMessage = await this.currentMessage?.reply(`(enqueued request, please wait for a response~)`);
                         sentQueueMessage = true;
                     }
@@ -120,6 +122,8 @@ export class Context {
                         break;
                     }
 
+                    this.agent.logger.trace("Agent: Recieved completion data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
+
                     if (json.choices) {
                         json.choices.forEach((choice: any) => {
                             if (choice.delta.content) {
@@ -137,7 +141,7 @@ export class Context {
         if (!event) {
             event = await this.parseMessage(message);
         }
-        
+
         if (this.ratelimited || this.handling) {
             this.events.add(event);
             return;
@@ -155,7 +159,7 @@ export class Context {
         }
 
         if (event.attempts === 0) {
-            this.agent.logger.debug("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
+            this.agent.logger.info("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
             this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(event)));
         }
 
@@ -231,6 +235,10 @@ export class Context {
 
                 if (!json) {
                     this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
+                    this.agent.logger.error("Agent: Malformed json:", this.agent.logger.color.hex("#7dffbc")(completion));
+
+                    this.handling = false;
+
                     return await this.handle(message, event);
                 }
 
@@ -260,7 +268,7 @@ export class Context {
             json.action = undefined;
         }
 
-        this.agent.logger.trace("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
+        this.agent.logger.info("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
         this.agent.logger.debug("Agent: Response data:", this.agent.logger.color.hex("#ff7de3")(completion));
 
         this.events.add(event);
@@ -293,7 +301,10 @@ export class Context {
                 if (postEvent) {
                     this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
                     this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
+
                     postEvent.attempts = 1;
+                    this.handling = false;
+
                     await this.handle(message, postEvent);
                 } else {
                     this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");

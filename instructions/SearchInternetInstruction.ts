@@ -4,6 +4,7 @@ import { Context, ContextEvent } from "../src/ai/Context";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 import google from "googlethis";
+import { Util } from "../src/util/Util";
 
 export class SearchWebInstruction extends Instruction {
     constructor(context: Piece.Context, options: InstructionOptions) {
@@ -23,7 +24,7 @@ export class SearchWebInstruction extends Instruction {
             attempts: 0,
             action: {
                 type: TaskType.SearchResults,
-                parameters: JSON.parse(JSON.stringify(results)) // TODO: find a better way to destructure this
+                parameters: Util.shrink(results)
             }
         }
     }

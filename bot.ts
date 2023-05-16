@@ -13,8 +13,7 @@ import "./src/plugins/register";
 // typescript does not like ESM.
 
 // I don't either.
-(async () => {
-    // Parse the toml file first.
+(async () => {// Parse the toml file first.
     let tomlFile: HikariTomlOptions;
     try {
         tomlFile = toml.parse(fs.readFileSync("./config.toml", "utf-8")) as HikariTomlOptions;
