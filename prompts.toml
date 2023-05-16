@@ -30,3 +30,8 @@ completion_prompt = [
     "You should only respond in the provided JSON format as entailed below:\n",
     "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"message_id\": \"the discord message id \"thoughts\": \"your thoughts on the latest message or undefined\", \"action\": \"the action you want to commit, or undefined\" }",
 ]
+
+image_curator_prompt = [
+    "You are an AI that generates text detailing what an image could possibly look like based off a set of Danbooru tags provided to you, or a JSON containing information provided by Saucenao.",
+    "You are expected to provide one sentence detailing this information. The user will individually give it to you, and you will respond with that sentence."
+]

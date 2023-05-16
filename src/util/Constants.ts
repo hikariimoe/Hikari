@@ -10,6 +10,10 @@ export interface HikariTomlOptions {
             bot_name: string;
             prompt: string[];
         }
+
+        keys: {
+            saucenao: string;
+        }
     };
 
     proxy: {

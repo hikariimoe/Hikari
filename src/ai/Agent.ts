@@ -11,6 +11,11 @@ export enum ProxyType {
     Aicg
 }
 
+export interface Prompts {
+    completion_prompt: string[];
+    image_curator_prompt: string[];
+}
+
 /**
  * An abstraction to work away everything related to AI functionality, and properly separate it from the rest of the code.
  */
@@ -31,6 +36,11 @@ export class Agent {
      * The configured prompt to use for the AI.
      */
     public prompt: string;
+
+    /**
+     * All of the internal prompts used by the AI.
+     */
+    public internal_prompts: Prompts;
 
     public model: string;
 
@@ -59,6 +69,7 @@ export class Agent {
             console.error(e);
         }
 
+        this.internal_prompts = tomlFile;
         this.prompt = `${this.client.configuration.bot.information.prompt.join(" ")}\n\n${tomlFile.completion_prompt.join(" ")}`;
         this.openaiConfig = new Configuration();
         this.assignPromptValues();
@@ -66,6 +77,10 @@ export class Agent {
 
     get logger() {
         return this.client.logger;
+    }
+
+    getPrompt(key: keyof Prompts) {
+        return this.internal_prompts[key].join(" ");
     }
 
     /**

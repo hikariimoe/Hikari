@@ -5,6 +5,7 @@ import { Util } from "../util/Util";
 import { Agent } from "./Agent";
 import { jsonrepair } from 'jsonrepair'
 import type { AxiosResponse } from "axios"; // imagine having to import an entire request framework just for a type
+import { match } from "assert";
 
 export interface ContextEvent {
     text?: string;
@@ -38,12 +39,12 @@ export class Context {
         this.parse();
     }
 
-    async handleCompletion(prompts: ChatCompletionRequestMessage[]): Promise<string> {
+    async handleCompletion(prompts: ChatCompletionRequestMessage[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
         return await new Promise(async (resolve, reject) => {
             let completionStream: any;
             try {
                 completionStream = await this.agent.ai?.createChatCompletion({
-                    model: this.agent.model,
+                    model: model,
                     stream: true,
                     messages: [{
                         role: "system",
@@ -57,11 +58,14 @@ export class Context {
                     this.ratelimited = true;
                     let until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
 
-                    const rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
+                    let rl: Message | undefined;
+                    if (sendReply == true) {
+                        rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
+                    }
 
                     this.agent.logger.warn("Agent: Rate limited, waiting", this.agent.logger.color.hex("#7dffbc")(until), "ms");
 
-                    setTimeout(async() => {
+                    setTimeout(async () => {
                         this.ratelimited = false;
 
                         await rl?.delete();
@@ -91,7 +95,15 @@ export class Context {
                         break;
                     }
 
-                    let json = JSON.parse(value);
+                    let json;
+                    try {
+                        json = JSON.parse(value);
+                    } catch (e) {
+                        completionStream?.data.destroy();
+                        reject(result);
+
+                        break;
+                    }
 
                     if (json.choices) {
                         json.choices.forEach((choice: any) => {
@@ -114,13 +126,10 @@ export class Context {
         this.currentMessage = message;
 
         if (!event) {
-            event = {
-                text: message.content,
-                username: message.author.username,
-                attempts: 0,
-                action: this.parseMessage(message)
-            };
+            event = await this.parseMessage(message);
         }
+
+        // return;
 
         if (event?.action && IgnoreTaskTypes.includes(event.action.type)) {
             // TODO: 
@@ -165,17 +174,20 @@ export class Context {
             content: JSON.stringify(Util.omit(event, ["attempts"]))
         });
 
-        let completion = await this.handleCompletion(prompts);
+        let completion: string;
+        try {
+            completion = await this.handleCompletion(prompts, true);
+        } catch (e) {
+            this.agent.logger.error("Agent: A response to the message", this.agent.logger.color.hex("#7dffbc")(message.id), "couldn't be generated, and encountered a critical problem.");
+            this.agent.logger.error("Agent: Malformed result data:", this.agent.logger.color.hex("#ff7de3")(e));
 
-        this.agent.logger.trace("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
-        this.agent.logger.debug("Agent: Response data:", this.agent.logger.color.hex("#ff7de3")(completion));
+            // We'll have to retry this one.
+            event.attempts++;
+            return this.handle(message, event);
+        }
 
         // Attempt to parse the json
         let json = this.tryParse(completion);
-
-        if (typeof json.action === "string") {
-            json.action = undefined;
-        }
 
         if (event.attempts > 5) {
             this.events.add(event);
@@ -220,12 +232,15 @@ export class Context {
                 this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
                 return undefined;
             }
-
         }
 
-        this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "successfully generated.");
-        this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
+        if (json.action && typeof json.action === "string") {
+            json.action = undefined;
+        }
 
+        this.agent.logger.trace("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
+        this.agent.logger.debug("Agent: Response data:", this.agent.logger.color.hex("#ff7de3")(completion));
+        
         this.events.add(event);
         this.events.add(json as ContextEvent);
 
@@ -290,10 +305,28 @@ export class Context {
         }
 
         if (json.text && json.text.length > 0 && json.text !== "") {
+            let content = json.text;
+
+            // Get mentions from the message.
+            // they're @Username, so we need to convert them to <@ID>
+            const regex = /@(\w+)/;
+
+            let matches = regex.exec(content);
+            
+            while (matches) {
+                const user = this.agent.client.users.cache.find(x => x.username === matches?.[1]);
+
+                if (user) {
+                    content = content.replace(new RegExp(`@${user.username}`), `<@${user.id}>`);
+                }
+
+                matches = regex.exec(content);
+            }
+
             if (toEdit) {
-                toEdit.edit(json.text || "(empty response)");
+                toEdit.edit(content);
             } else {
-                message.reply(json.text || "(empty response)");
+                message.reply(content);
             }
         }
 
@@ -310,8 +343,150 @@ export class Context {
         }
     }
 
-    private parseMessage(_message: Message): Task | undefined {
-        return undefined;
+    private async parseMessage(message: Message): Promise<ContextEvent> {
+        let event: ContextEvent = {
+            text: message.content,
+            username: message.author.username,
+            attempts: 0
+        };
+
+        // Filter mentions into usernames.
+        if (message.mentions.users.size > 0) {
+            // Parse <@!123456789> into @username
+            const regex = /<@!?(\d+)>/g;
+            let matches = message.content.match(regex);
+
+            if (matches) {
+                matches.forEach((match) => {
+                    const id = match.replace(/<@!?(\d+)>/, "$1");
+                    const user = message.mentions.users.get(id);
+
+                    if (user) {
+                        event.text = event.text?.replace(match, `@${user.username}`);
+                    }
+                });
+            }
+        }
+
+        if (message.attachments.size > 0) {
+            const attachment = message.attachments.first();
+
+            if (attachment?.name.endsWith(".png") || attachment?.name.endsWith(".jpg") || attachment?.name.endsWith(".jpeg")) {
+                this.agent.logger.debug("Agent: Message", this.agent.logger.color.hex("#7dffbc")(message.id), "contains an image, so we're going to try to parse it.");
+                
+                let url = new URL("https://saucenao.com/search.php");
+                url.search = new URLSearchParams({
+                    api_key: this.agent.client.configuration.bot.keys.saucenao,
+                    db: "999",
+                    output_type: "2",
+                    url: attachment.url
+                }).toString();
+
+                let naoResponse = await fetch(url, { method: "GET" });
+
+                if (naoResponse.status !== 200) {
+                    // todo: handle this?
+                    return event;
+                }
+
+                let resJson = await naoResponse.json();
+                let sortedResults = resJson.results.sort((a: any, b: any) => parseFloat(b.header.similarity) - parseFloat(a.header.similarity));
+                let first = sortedResults[0];
+
+                let similarity = parseFloat(first.header.similarity);
+                let finalString = "The image in the previous message contains ";
+
+                if (similarity >= 90 && first.data != null) {
+                    let charFound = false;
+
+                    if (first.data.characters != null) {
+                        let characters = first.data.characters;
+                        charFound = true;
+
+                        if (characters != null && characters.trim() != "") {
+                            finalString += `the characters ${characters} `;
+                        } else {
+                            charFound = false;
+                        }
+                    }
+
+                    if (first.data.material != null) {
+                        let material = first.data.material;
+
+                        if (material != null && material.trim() != "") {
+                            finalString += `from the source material ${material} `;
+                        } else if (material == "original") {
+                            charFound = false;
+                        }
+                    }
+
+                    // if (charFound === false) {
+                    let tags = await this.getTags(attachment.url, attachment.name);
+
+                    if (tags.length > 0) {
+                        finalString += `The image also contains the tags ${tags.join(", ")}`;
+                    }
+                    // }
+                } else {
+                    let tags = await this.getTags(attachment.url, attachment.name);
+
+                    if (tags.length > 0) {
+                        finalString = `The image in the previous message appears to fit the danbooru tags: ${tags.join(", ")}`;
+                    }
+                }
+
+                if (finalString == "The image in the previous message contains ") {
+                    finalString += "nothing of interest, as you can't find any characters or source material, or tell what it is."
+                }
+
+                event.action = {
+                    type: TaskType.UploadImage,
+                    parameters: {
+                        query: finalString
+                    }
+                }
+            } else {
+                event.action = {
+                    type: TaskType.UploadImage,
+                    parameters: {
+                        query: "You are unsure what this image is, as you can't find any characters or source material, or tell what it is."
+                    }
+                }
+            }
+
+            return event;
+        }
+
+        return event;
+    }
+
+    private async getTags(url: string, filename: string) {
+        this.agent.logger.debug("Agent: Getting tags for image", this.agent.logger.color.hex("#7dffbc")(url));
+        
+        let image = await fetch(url, { method: "GET" });
+
+        let formData = new FormData();
+        formData.append("format", "json");
+        formData.append("file", await image.blob(), filename);
+
+        let resp = await (await fetch("https://autotagger.donmai.us/evaluate", {
+            method: "POST",
+            body: formData
+        })).json();
+
+        let tags = [];
+
+        for (const tag of Object.keys(resp[0].tags)) {
+            if (tag.startsWith("rating:"))
+                continue;
+
+            let tagSimilarity = resp[0].tags[tag];
+
+            if (tagSimilarity >= 0.5)
+                tags.push(tag);
+        }
+
+        return tags;
     }
 
     private parse() {
