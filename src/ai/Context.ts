@@ -75,9 +75,21 @@ export class Context {
             }
 
             let result = "";
+            let sentQueueMessage = false;
+            let queueMessage: Message | undefined;
             // @ts-ignore
             // don't think there's a type for this lol 
-            completionStream?.data.on("data", (data: Buffer) => {
+            completionStream?.data.on("data", async(data: Buffer) => {
+                if (data.includes("queue")) {
+                    // Well Fuck
+                    if (sentQueueMessage == false && sendReply == true) {
+                        queueMessage = await this.currentMessage?.reply(`(enqueued request, please wait for a response~)`);
+                        sentQueueMessage = true;
+                    }
+
+                    return;
+                }
+
                 let values = data.toString().split("\n")
                     .filter((line) => line.trim() !== "");
 
@@ -89,6 +101,10 @@ export class Context {
                     // trim newlines
                     if (value === "[DONE]") {
                         // @ts-ignore
+                        if (sentQueueMessage == true) {
+                            await queueMessage?.delete();
+                        }
+                        
                         completionStream?.data.destroy();
                         resolve(result);
 
@@ -240,7 +256,7 @@ export class Context {
 
         this.agent.logger.trace("Agent: AI response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has been generated.");
         this.agent.logger.debug("Agent: Response data:", this.agent.logger.color.hex("#ff7de3")(completion));
-        
+
         this.events.add(event);
         this.events.add(json as ContextEvent);
 
