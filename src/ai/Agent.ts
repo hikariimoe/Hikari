@@ -105,7 +105,6 @@ export class Agent {
             }
         }
 
-        
         let ctx = this.contexts.get(channel);
         if (!this.contexts.has(channel)) {
             this.logger.trace("Agent: Handling the creation of a context for", c?.id);

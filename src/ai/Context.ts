@@ -29,6 +29,8 @@ export class Context {
 
     public ratelimited: boolean = false;
 
+    public handling: boolean = false;
+
     public currentMessage: Message | undefined;
 
     constructor(agent: Agent, channel: TextBasedChannel) {
@@ -46,10 +48,7 @@ export class Context {
                 completionStream = await this.agent.ai?.createChatCompletion({
                     model: model,
                     stream: true,
-                    messages: [{
-                        role: "system",
-                        content: this.agent.prompt
-                    }, ...prompts]
+                    messages: prompts
                 }, {
                     responseType: "stream"
                 });
@@ -69,7 +68,7 @@ export class Context {
                         this.ratelimited = false;
 
                         await rl?.delete();
-                        resolve(await this.handleCompletion(prompts));
+                        resolve(await this.handleCompletion(prompts, sendReply ? false : sendReply, model));
                     }, until);
                 }
             }
@@ -79,7 +78,7 @@ export class Context {
             let queueMessage: Message | undefined;
             // @ts-ignore
             // don't think there's a type for this lol 
-            completionStream?.data.on("data", async(data: Buffer) => {
+            completionStream?.data.on("data", async (data: Buffer) => {
                 if (data.includes("queue")) {
                     // Well Fuck
                     if (sentQueueMessage == false && sendReply == true) {
@@ -104,7 +103,7 @@ export class Context {
                         if (sentQueueMessage == true) {
                             await queueMessage?.delete();
                         }
-                        
+
                         completionStream?.data.destroy();
                         resolve(result);
 
@@ -135,15 +134,18 @@ export class Context {
     }
 
     async handle(message: Message, event?: ContextEvent, toEdit?: Message): Promise<ContextEvent | undefined> {
-        if (this.ratelimited) {
+        if (!event) {
+            event = await this.parseMessage(message);
+        }
+        
+        if (this.ratelimited || this.handling) {
+            this.events.add(event);
             return;
         }
 
         this.currentMessage = message;
+        this.handling = true;
 
-        if (!event) {
-            event = await this.parseMessage(message);
-        }
 
         // return;
 
@@ -167,7 +169,11 @@ export class Context {
             role = "user";
         }
 
-        const prompts: ChatCompletionRequestMessage[] = [];
+        const prompts: ChatCompletionRequestMessage[] = [{
+            role: "system",
+            content: this.agent.prompt
+        }];
+        
         this.events.forEach((val) => {
             let eventRole: ChatCompletionRequestMessageRoleEnum;
             if (!val.username) {
@@ -225,7 +231,7 @@ export class Context {
 
                 if (!json) {
                     this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
-                    return this.handle(message, event);
+                    return await this.handle(message, event);
                 }
 
                 if (Array.isArray(json)) {
@@ -347,6 +353,7 @@ export class Context {
         }
 
         this.currentMessage = undefined;
+        this.handling = false;
 
         return json as ContextEvent;
     }
@@ -389,7 +396,7 @@ export class Context {
 
             if (attachment?.name.endsWith(".png") || attachment?.name.endsWith(".jpg") || attachment?.name.endsWith(".jpeg")) {
                 this.agent.logger.debug("Agent: Message", this.agent.logger.color.hex("#7dffbc")(message.id), "contains an image, so we're going to try to parse it.");
-                
+
                 let url = new URL("https://saucenao.com/search.php");
                 url.search = new URLSearchParams({
                     api_key: this.agent.client.configuration.bot.keys.saucenao,
@@ -410,49 +417,30 @@ export class Context {
                 let first = sortedResults[0];
 
                 let similarity = parseFloat(first.header.similarity);
-                let finalString = "The image in the previous message contains ";
+                let finalString = "";
 
                 if (similarity >= 90 && first.data != null) {
-                    let charFound = false;
-
-                    if (first.data.characters != null) {
-                        let characters = first.data.characters;
-                        charFound = true;
-
-                        if (characters != null && characters.trim() != "") {
-                            finalString += `the characters ${characters} `;
-                        } else {
-                            charFound = false;
-                        }
-                    }
-
-                    if (first.data.material != null) {
-                        let material = first.data.material;
-
-                        if (material != null && material.trim() != "") {
-                            finalString += `from the source material ${material} `;
-                        } else if (material == "original") {
-                            charFound = false;
-                        }
-                    }
-
-                    // if (charFound === false) {
                     let tags = await this.getTags(attachment.url, attachment.name);
+                    finalString = await this.handleCompletion([{
+                        role: "system",
+                        content: this.agent.getPrompt("image_curator_prompt")
+                    }, {
+                        role: "user",
+                        content: `${JSON.stringify(first.data)}${tags.length > 0 ? `\n\n${tags.join(", ")}` : ""}`
+                    }], false, "gpt-3.5-turbo"); // Enforce gpt-3.5 because gpt-4 is expensive and this ain't rly that bulky of a request tbh
 
-                    if (tags.length > 0) {
-                        finalString += `The image also contains the tags ${tags.join(", ")}`;
-                    }
-                    // }
                 } else {
                     let tags = await this.getTags(attachment.url, attachment.name);
 
                     if (tags.length > 0) {
-                        finalString = `The image in the previous message appears to fit the danbooru tags: ${tags.join(", ")}`;
+                        finalString = await this.handleCompletion([{
+                            role: "system",
+                            content: this.agent.getPrompt("image_curator_prompt")
+                        }, {
+                            role: "user",
+                            content: tags.join(", ")
+                        }], false, "gpt-3.5-turbo"); // Enforce gpt-3.5 because gpt-4 is expensive and this ain't rly that bulky of a request tbh
                     }
-                }
-
-                if (finalString == "The image in the previous message contains ") {
-                    finalString += "nothing of interest, as you can't find any characters or source material, or tell what it is."
                 }
 
                 event.action = {
@@ -478,7 +466,7 @@ export class Context {
 
     private async getTags(url: string, filename: string) {
         this.agent.logger.debug("Agent: Getting tags for image", this.agent.logger.color.hex("#7dffbc")(url));
-        
+
         let image = await fetch(url, { method: "GET" });
 
         let formData = new FormData();
