@@ -24,13 +24,13 @@ export class GetMemoryInstruction extends Instruction {
 
         return {
             attempts: 0,
-            actions: [{
+            action: {
                 type: TaskType.MemoryData,
                 parameters: {
                     query: event.parameters.query,
                     memories
                 }
-            }]
+            }
         };
     }
 }

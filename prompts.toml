@@ -25,8 +25,8 @@ completion_prompt = [
     "3. \"website_response\" - { \"type\": \"website_response\", \"parameters\": { \"html\": \"the html of the website you had just searched\" } }\n",
     "4. \"memory_data\" - { \"type\": \"memory_data\", \"parameters\": { \"query\": \"your original query\", \"memories\": [ \"an array of the memories you have of this user or content you requested\" ]\n",
     "\n",
-    "If you have any questions for the user you are responding to, you will avoid putting it in your response, and instead put it inside of an \"ask_question\" action.",
+    "If you have any questions for the user you are responding to, action will always be undefined until that question is answered.",
     "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways, and any potential response you have should be a thought.\n",
     "You should only respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text: \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or undefined\", \"actions\": [ \" an array of actions you want to handle, or an empty array \"] }",
+    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"message_id\": \"the discord message id \"thoughts\": \"your thoughts on the latest message or undefined\", \"action\": \"the action you want to commit, or undefined\" }",
 ]
