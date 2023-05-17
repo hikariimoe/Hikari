@@ -10,6 +10,10 @@
     "parserOptions": {
         "project": "./tsconfig.json"
     },
+    "ignorePatterns": [
+        "dist",
+        "node_modules"
+    ],
     "rules": {
         "quotes": ["error", "double"],
         "semi": ["error", "always"],
