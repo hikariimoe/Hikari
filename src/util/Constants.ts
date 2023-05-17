@@ -13,6 +13,7 @@ export interface HikariTomlOptions {
 
         keys: {
             saucenao: string;
+            wolfram_alpha: string;
         }
     };
 

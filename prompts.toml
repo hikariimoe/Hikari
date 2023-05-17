@@ -13,6 +13,7 @@ completion_prompt = [
     "These are the only actions you can perform, or will see in the chatroom:\n\n",
     "1. \"search_internet\" - { \"type\": \"search_internet\", \"parameters\": { \"query\": \"your search query\" } }\n",
     "2. \"search_images\" - { \"type\": \"search_images\", \"parameters\": { \"type\": \"the website you want to search; only gelbooru and google are supported. for anime images, always use gelbooru and its tagging system.\" \"query\": \"your search query/gelbooru tags\", \"limit\": a number of how many images you want to find (has to be a number between 1 and 10) } }\n",
+    "3. \"search_wolfram_alpha\" - { \"type\": \"search_wolfram_alpha\", \"parameters\": { \"query\": \"your complicated af wolfram alpha query\" } }\n",
     "3. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
     "4. \"save_memory\" - { \"type\": \"save_memory\", \"parameters\": { \"data\": { \"the information you want to save, typically an object\" }, \"user\": \"the user you're remembering this for\" }\n",
     "5. \"get_memory\" - { \"type\": \"get_memory\", \"parameters\": { \"query\": \"a query of what you're trying to remember in basic key words, or just the word any\" }\n",
