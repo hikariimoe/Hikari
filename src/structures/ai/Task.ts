@@ -4,13 +4,14 @@ export enum TaskType {
     SearchImages = "search_images",
     SearchResults = "search_results",
     InternetResults = "internet_results",
+    DeleteMessage = "delete_message",
     ImageResults = "image_results",
     UploadImage = "upload_image",
     AskQuestion = "ask_question",
     SaveMemory = "save_memory",
-    DeleteMemory = "delete_memory",
     GetMemory = "get_memory",
-    MemoryData = "memory_data"
+    MemoryData = "memory_data",
+    ActionResponse = "action_response"
 }
 
 /*

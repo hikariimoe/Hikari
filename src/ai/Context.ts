@@ -10,6 +10,7 @@ import { match } from "assert";
 export interface ContextEvent {
     text?: string;
     username?: string;
+    message_id?: string;
     thoughts?: string;
     attempts: number;
     action?: Task;
@@ -106,6 +107,18 @@ export class Context {
                             await queueMessage?.delete();
                         }
 
+                        if (result.includes("upstream error")) {
+                            if (result.includes("server_error")) {
+                                this.agent.logger.error("Agent: The OpenAI API is currently experiencing major issues, so we can't continue.");
+                                this.agent.logger.error("Agent: Please try again later, or contact the developer if this issue persists.");
+
+                                await this.currentMessage?.delete();
+                            }
+
+                            reject(undefined);
+                            break;
+                        }
+
                         this.agent.logger.trace("Agent: Request has been completed, returning result.");
 
                         completionStream?.data.destroy();
@@ -170,7 +183,7 @@ export class Context {
             role: "system",
             content: this.agent.prompt
         }];
-        
+
         this.events.forEach((val) => {
             let eventRole: ChatCompletionRequestMessageRoleEnum;
             if (!val.username) {
@@ -199,6 +212,12 @@ export class Context {
         try {
             completion = await this.handleCompletion(prompts, true);
         } catch (e) {
+            if (e === undefined) {
+                // Well, api's down.
+                this.handling = false;
+                return;
+            }
+
             this.agent.logger.error("Agent: A response to the message", this.agent.logger.color.hex("#7dffbc")(message.id), "couldn't be generated, and encountered a critical problem.");
             this.agent.logger.error("Agent: Malformed result data:", this.agent.logger.color.hex("#ff7de3")(e));
 
@@ -276,8 +295,8 @@ export class Context {
 
         // Quick fixes because the AI can be really fucking stupid
         if (json.action && typeof json.action === "string") {
-            if (json.action == "undefined") {
-                json.action = undefined;
+            if (json.action == "null") {
+                json.action = null;
             } else {
                 if (json.parameters) {
                     json.action = {
@@ -290,7 +309,7 @@ export class Context {
             }
         }
 
-        const urls = json.action?.parameters.url ?? json.action?.parameters.urls;
+        const urls = json.action?.parameters?.url ?? json.action?.parameters?.urls;
         if (json.action?.type == "upload_image" && !urls) {
             this.agent.logger.warn("Agent: The AI tried to upload an image(s), but it didn't provide any urls.");
             this.agent.logger.debug("Agent: Action data:", this.agent.logger.color.hex("#ff7de3")(json.action));
@@ -308,53 +327,53 @@ export class Context {
         if (json.action) {
             if (IgnoreTaskTypes.includes(json.action.type)) {
                 this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it, but it was ignored.");
-                return;
-            }
+            } else {
 
-            this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
-            this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
-            this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
-            let sent = false;
+                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
+                this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
+                this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
+                let sent = false;
 
-            const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType === json.action.type);
+                const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType === json.action.type);
 
-            if (instructionHandler) {
-                if (!sent) {
-                    sent = true;
+                if (instructionHandler) {
+                    if (!sent) {
+                        sent = true;
 
-                    if (json.text && json.text.length > 0 && json.text !== "") {
-                        if (toEdit) {
-                            toEdit.edit(json.text || "(empty response)");
-                        } else {
-                            message.reply(json.text || "(empty response)");
+                        if (json.text && json.text.length > 0 && json.text !== "") {
+                            if (toEdit) {
+                                toEdit.edit(json.text || "(empty response)");
+                            } else {
+                                message.reply(json.text || "(empty response)");
+                            }
                         }
                     }
-                }
 
-                this.agent.logger.trace("Agent: Proper instruction handler found.");
-                const postEvent = await instructionHandler.handle(message, json.action as Task, this);
+                    this.agent.logger.trace("Agent: Proper instruction handler found.");
+                    const postEvent = await instructionHandler.handle(message, json.action as Task, this);
 
-                if (postEvent) {
-                    this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
-                    this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
+                    if (postEvent) {
+                        this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
+                        this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
 
-                    postEvent.attempts = 1;
-                    this.handling = false;
+                        postEvent.attempts = 1;
+                        this.handling = false;
 
-                    await this.handle(message, postEvent);
+                        await this.handle(message, postEvent);
+                    } else {
+                        this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");
+                    }
+
+                    sent = true;
                 } else {
-                    this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");
+                    // Invalid action.
+                    this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
+                    this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
                 }
 
-                sent = true;
-            } else {
-                // Invalid action.
-                this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
-                this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
-            }
-
-            if (sent) {
-                return;
+                if (sent) {
+                    return;
+                }
             }
         }
 
@@ -382,7 +401,7 @@ export class Context {
             const regex = /@(\w+)/;
 
             let matches = regex.exec(content);
-            
+
             while (matches) {
                 const user = this.agent.client.users.cache.find(x => x.username === matches?.[1]);
 
@@ -396,12 +415,12 @@ export class Context {
             if (toEdit) {
                 toEdit.edit(content);
             } else {
-                const urls = json.action?.parameters.url ?? json.action?.parameters.urls;
+                const urls = json.action?.parameters?.url ?? json.action?.parameters?.urls;
                 if (urls) {
                     this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has an image(s) attached to it, so we're sending it as a file.");
-                } 
+                }
 
-                await message.reply({
+                const m = await message.reply({
                     content: content,
                     files: json.action && urls ? urls.map((x: string) => {
                         // get the file name out of the url
@@ -413,6 +432,8 @@ export class Context {
                         }
                     }) : undefined
                 });
+
+                json.message_id = m.id;
             }
         }
 
@@ -433,6 +454,7 @@ export class Context {
     private async parseMessage(message: Message): Promise<ContextEvent> {
         let event: ContextEvent = {
             text: message.content,
+            message_id: message.id,
             username: message.author.username,
             attempts: 0
         };
