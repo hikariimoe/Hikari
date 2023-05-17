@@ -72,6 +72,9 @@ export class Context {
                         await rl?.delete();
                         resolve(await this.handleCompletion(prompts, sendReply ? false : sendReply, model));
                     }, until);
+                } else {
+                    this.agent.logger.error("Agent: Error while creating completion request:", e);
+                    reject(undefined);
                 }
             }
 
