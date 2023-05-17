@@ -11,6 +11,10 @@
 		<a href="https://github.com/irisu01/Hikari/issues"><img src="https://img.shields.io/github/issues/irisu01/Hikari" /></a>
 		<a href="https://github.com/irisu01/Hikari/actions"><img src="https://img.shields.io/github/actions/workflow/status/irisu01/Hikari/tsc.yml" /></a>
 		<img src="https://img.shields.io/tokei/lines/github/irisu01/Hikari" />
+		<a href="https://github.com/sponsors/irisu01"><img src="https://img.shields.io/github/sponsors/irisu01" /></a>
+	</p>
+	<p>
+		<a href="https://ko-fi.com/irisu"><img height="24" src="https://storage.ko-fi.com/cdn/brandasset/kofi_button_blue.png?_gl=1*6usjw9*_ga*MTgyNzQwOTg3NS4xNjg0Mjg1MTcx*_ga_M13FZ7VQ2C*MTY4NDI4NTE3MS4xLjEuMTY4NDI4NTUzNi4yMS4wLjA." /></a>
 	</p>
 </div>
 

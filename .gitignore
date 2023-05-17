@@ -1,3 +1,4 @@
+dist/
 config.toml
 .env
 schema.prisma
