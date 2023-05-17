@@ -106,6 +106,8 @@ export class Context {
                             await queueMessage?.delete();
                         }
 
+                        this.agent.logger.trace("Agent: Request has been completed, returning result.");
+
                         completionStream?.data.destroy();
                         resolve(result);
 
@@ -141,7 +143,6 @@ export class Context {
         if (!event) {
             event = await this.parseMessage(message);
         }
-
         if (this.ratelimited || this.handling) {
             this.events.add(event);
             return;
@@ -149,14 +150,6 @@ export class Context {
 
         this.currentMessage = message;
         this.handling = true;
-
-
-        // return;
-
-        if (event?.action && IgnoreTaskTypes.includes(event.action.type)) {
-            // TODO: 
-            return;
-        }
 
         if (event.attempts === 0) {
             this.agent.logger.info("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
@@ -200,6 +193,8 @@ export class Context {
             content: JSON.stringify(Util.omit(event, ["attempts"]))
         });
 
+        await message.channel.sendTyping();
+
         let completion: string;
         try {
             completion = await this.handleCompletion(prompts, true);
@@ -210,6 +205,11 @@ export class Context {
             // We'll have to retry this one.
             event.attempts++;
             return this.handle(message, event);
+        }
+
+        if (completion.includes(", \"action\": undefined")) {
+            // Remove it entirely
+            completion = completion.replace(", \"action\": undefined", "");
         }
 
         // Attempt to parse the json
@@ -237,6 +237,7 @@ export class Context {
                     this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
                     this.agent.logger.error("Agent: Malformed json:", this.agent.logger.color.hex("#7dffbc")(completion));
 
+                    event.attempts++;
                     this.handling = false;
 
                     return await this.handle(message, event);
@@ -265,7 +266,11 @@ export class Context {
             } catch (err) {
                 this.agent.logger.error("Agent: JSON repair failed for response to message", this.agent.logger.color.hex("#7dffbc")(message.id));
                 this.agent.logger.error("Agent: Malformed json:", this.agent.logger.color.hex("#7dffbc")(completion));
-                return undefined;
+
+                this.handling = false;
+                event.attempts++;
+
+                return await this.handle(message, event);
             }
         }
 
@@ -367,6 +372,7 @@ export class Context {
                 removed += 1;
             }
         }
+
 
         if (json.text && json.text.length > 0 && json.text !== "") {
             let content = json.text;
@@ -515,8 +521,6 @@ export class Context {
                     }
                 }
             }
-
-            return event;
         }
 
         return event;

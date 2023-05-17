@@ -16,6 +16,9 @@
         "instructions/**/*.ts",
         "commands/**/*.ts"
     ],
+    "exclude": [
+        "node_modules"
+    ],
     "files": [
         "bot.ts",
         "types/pieces.d.ts"

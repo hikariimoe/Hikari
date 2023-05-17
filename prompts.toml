@@ -29,7 +29,7 @@ completion_prompt = [
     "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways, and any potential response you have should be a thought.",
     "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload.\n",
     "You should only respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or undefined\", \"action\": \"the action you want to commit, or undefined\" }",
+    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"thoughts\": \"your thoughts on the latest message or null\", \"action\": \"the action you want to commit, or null\" }",
 ]
 
 image_curator_prompt = [
