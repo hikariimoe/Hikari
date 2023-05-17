@@ -1,11 +1,13 @@
-import fetch from "node-fetch";
-import fs from "fs";
-import toml from "toml";
-import type { Hikari } from "../Hikari";
-import { load } from "cheerio";
-import { Configuration, OpenAIApi } from "openai";
+
 import { TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
+import { Configuration, OpenAIApi } from "openai";
 import { Context } from "./Context";
+import { load } from "cheerio";
+import fetch from "node-fetch";
+import toml from "toml";
+import fs from "fs";
+
+import type { Hikari } from "../Hikari";
 
 export enum ProxyType {
     Aicg
@@ -20,57 +22,39 @@ export interface Prompts {
  * An abstraction to work away everything related to AI functionality, and properly separate it from the rest of the code.
  */
 export class Agent {
-    /**
-     * The client that instantiated this agent.
-     */
-    public client: Hikari;
-
-    /**
-     * The OpenAI API instance.
-     */
+    /** The OpenAI API instance. */
     public ai?: OpenAIApi;
-
+    /** The assigned name of te bot */
     public name: string;
-
-    /**
-     * The configured prompt to use for the AI.
-     */
+    /** The configured prompt to use for the AI. */
     public prompt: string;
-
-    /**
-     * All of the internal prompts used by the AI.
-     */
+    /** All of the internal prompts used by the AI. */
     public internal_prompts: Prompts;
-
+    /** The GPT model to use when creating completions.  */
     public model: string;
-
-    /**
-     * The configuration for the openai API.
-     */
+    /** The configuration for the OpenAI API. */
     public openaiConfig: Configuration;
-
+    /** Propogated events to the AI Agent from text channels. */
     public contexts: Map<TextBasedChannelResolvable, Context>;
 
-    constructor(client: Hikari) {
-        this.client = client;
-        this.contexts = new Map();
-        this.name = client.configuration.bot.information.bot_name;
+    constructor(
+        public client: Hikari
+    ) {
         this.model = client.configuration.proxy.model;
+        this.name = client.configuration.bot.information.bot_name;
+        this.contexts = new Map();
 
         this.logger.debug("Agent: Initializing the agent...");
+        this.logger.trace("Agent: Parsing prompts for the agent.");
+        
+        this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
 
-        // Get the base prompts
-        let tomlFile: any;
-        try {
-            this.logger.trace("Agent: Parsing prompts for the agent.");
-            tomlFile = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
-        } catch (e) {
-            console.error("Failed to parse config.toml file.");
-            console.error(e);
-        }
-
-        this.internal_prompts = tomlFile;
-        this.prompt = `${this.client.configuration.bot.information.prompt.join(" ")}\n\n${tomlFile.completion_prompt.join(" ")}`;
+        this.prompt = `${
+            this.client.configuration.bot.information.prompt.join(" ")
+        }\n\n${
+            this.internal_prompts.completion_prompt.join(" ")
+        }`;
+        
         this.openaiConfig = new Configuration();
         this.assignPromptValues();
     }
@@ -79,7 +63,7 @@ export class Agent {
         return this.client.logger;
     }
 
-    getPrompt(key: keyof Prompts) {
+    public getPrompt(key: keyof Prompts) {
         return this.internal_prompts[key].join(" ");
     }
 
@@ -91,39 +75,30 @@ export class Agent {
     }
 
     /**
-     * Creates a context for this channel, or gets it if any exists.
-     * @param channel 
+     * Creates a context for this channel, or returns one if any exists.
+     * @param channel The channel to create a context for.
      */
-    async context(channel: TextBasedChannelResolvable) {
-        let c = this.client.channels.resolve(channel);
-
-        if (!c) {
-            if (typeof channel === "string") {
-                c = await this.client.channels.fetch(channel);
-            } else {
-                c = channel; // lmao it's already a channel
-            }
-        }
-
-        let ctx = this.contexts.get(channel);
-        if (!this.contexts.has(channel)) {
-            this.logger.info("Agent: Handling the creation of a context for channel", c?.id);
-            ctx = new Context(this, c as TextBasedChannel);
-
-            this.contexts.set(channel, ctx);
+    public async context(resolvable: TextBasedChannelResolvable) {
+        if (!this.contexts.has(resolvable)) {
+            const channel = this.client.channels.resolve(resolvable) ?? await this.client.channels.fetch(
+                resolvable as string
+            );
+            
+            this.logger.info("Agent: Handling the creation of a context for channel", channel?.id);
+            this.contexts.set(resolvable, new Context(this, channel as TextBasedChannel));
         }
  
-        return ctx;
+        return this.contexts.get(resolvable);
     }
 
     /**
      * Attempts to set the proxy that's best suited for the client.
      */
-    async attemptSetProxy() {
-        const proxyTimes: Record<string, {
+    public async attemptSetProxy() {
+        const proxies: Record<string, {
             time: number;
             type: ProxyType;
-            proxyData: any;
+            data: any;
         }> = {};
 
         this.logger.trace("Agent: Attempting to set a usable proxy from the list of them.");
@@ -131,77 +106,82 @@ export class Agent {
         for (const proxy of this.client.configuration.proxy.preferred_proxies) {
             this.logger.trace(
                 "Agent: Testing proxy",
-                this.client.logger.color.hex("#a7e5fa")(proxy),
+                this.client.logger.color.hex("#a7e5fa")(proxy), // i think it'd be better to move this hex color thing to a separate constant
                 "for viable use.."
             );
 
             const start = Date.now();
             const homepage = await fetch(proxy);
 
-            if (homepage.status === 200) {
-                const html = await homepage.text();
-                const $ = load(html);
+            if (homepage.status != 200) {
+                this.client.logger.error(
+                    "Agent: Proxy",
+                    this.client.logger.color.hex("#a7e5fa")(proxy),
+                    "wasnt't found, so it's likely a dead link."
+                );
 
-                const proxyData = JSON.parse($("body > pre").text());
+                continue;
+            }
 
-                if (proxyData.config.promptLogging === "true") {
-                    this.client.logger.warn(
-                        "Agent: Proxy",
-                        this.client.logger.color.hex("#a7e5fa")(proxy),
-                        "is logging prompts, which is very risky for the privacy of the users."
-                    );
+            const $ = load(await homepage.text());
+            const data = JSON.parse($("body > pre").text());
 
-                    if (this.client.configuration.proxy.no_loggers) {
-                        this.client.logger.warn("Because of the current configuration, this proxy will not be used.");
-                        continue;
-                    }
-                }
+            if (data.config.promptLogging == "true") {
+                this.client.logger.warn(
+                    "Agent: Proxy",
+                    this.client.logger.color.hex("#a7e5fa")(proxy),
+                    "is logging prompts, which is very risky for the privacy of the users."
+                );
 
-                // Test the proxy for an OpenAI API call
-                const apiTest = await fetch(`${proxy}/api/v1`);
-
-                if (apiTest.status !== 404) {
-                    this.client.logger.error("Agent: Proxy", this.client.logger.color.hex("#a7e5fa")(proxy), "didn't return not found, so it's not a valid proxy.");
+                if (this.client.configuration.proxy.no_loggers) {
+                    this.client.logger.warn("Because of the current configuration, this proxy will not be used.");
                     continue;
                 }
-
-                const end = Date.now();
-                proxyTimes[proxy] = {
-                    time: end - start,
-                    type: ProxyType.Aicg, // TODO: Add proper proxy type detection
-                    proxyData
-                };
-            } else {
-                this.client.logger.error("Agent: Proxy", this.client.logger.color.hex("#a7e5fa")(proxy), "wasnt't found, so it's likely a dead link.");
             }
+
+            // Test the proxy for an OpenAI API call
+            if ((await fetch(`${proxy}/api/v1`)).status != 404) {
+                this.client.logger.error(
+                    "Agent: Proxy",
+                    this.client.logger.color.hex("#a7e5fa")(proxy),
+                    "didn't return 404, so it's not a valid proxy."
+                );
+                continue;
+            }
+
+            proxies[proxy] = {
+                time: Date.now() - start,
+                type: ProxyType.Aicg, // TODO: Add proper proxy type detection
+                data
+            };
         }
         
         this.logger.debug("Agent: Gathered a list of workable proxies.");
-        this.logger.debug("Agent: Proxy List Size:", Object.keys(proxyTimes).length);
+        this.logger.debug("Agent: Proxy List Size:", Object.keys(proxies).length);
         this.logger.trace("Agent: Determining which one works the best for our usecases");
 
-        if (Object.keys(proxyTimes).length === 0) {
+        if (Object.keys(proxies).length === 0) {
             this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");
             process.exit(1);
         }
 
-        const fastestProxy = Object.keys(proxyTimes).reduce((a, b) => proxyTimes[a].time < proxyTimes[b].time ? a : b);
+        const fastest = Object.keys(proxies).reduce(
+            (a, b) => proxies[a].time < proxies[b].time ? a : b
+        );
 
-        if (fastestProxy) {
-            const proxy = proxyTimes[fastestProxy];
-            
-            // TODO: support proxy types
-            const url = proxy.proxyData.endpoints.openai;
+        const proxy = proxies[fastest];
+        const basePath = proxy.data.endpoints.openai;  // TODO: support proxy types
+        this.openaiConfig = new Configuration({ basePath });
 
-            this.openaiConfig = new Configuration({
-                basePath: url,
-            });
-
-            this.client.logger.info("Agent: Proxy", this.client.logger.color.yellow(fastestProxy), "was found to be the best proxy available, and will be used.");
-        }
+        this.client.logger.info(
+            "Agent: Proxy",
+            this.client.logger.color.yellow(fastest),
+            "was found to be the best proxy available, and will be used."
+        );
     }
 
     private assignPromptValues() {
-        this.prompt = this.prompt.replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);
+        this.prompt = this.prompt
+            .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
     }
 }

@@ -1,6 +1,6 @@
 import { Instruction, InstructionOptions } from "../src/structures/Instruction";
-import { Task, TaskType } from "../src/structures/ai/Task";
 import { Context, ContextEvent } from "../src/ai/Context";
+import { Task, TaskType } from "../src/structures/ai/Task";
 import { Piece } from "@sapphire/pieces";
 import { Util } from "../src/util/Util";
 import { Message } from "discord.js";
@@ -10,7 +10,7 @@ export class SearchWebInstruction extends Instruction {
     constructor(context: Piece.Context, options: InstructionOptions) {
         super(context, {
             ...options,
-            taskType: TaskType.SearchWeb
+            taskType: TaskType.ViewWebsite
         });
     }
 

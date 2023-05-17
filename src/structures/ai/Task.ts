@@ -3,7 +3,9 @@ export enum TaskType {
     SearchWeb = "search_internet",
     SearchImages = "search_images",
     SearchResults = "search_results",
+    SearchWolframAlpha = "search_wolfram_alpha",
     InternetResults = "internet_results",
+    ViewWebsite = "view_website",
     DeleteMessage = "delete_message",
     ImageResults = "image_results",
     UploadImage = "upload_image",
@@ -11,23 +13,10 @@ export enum TaskType {
     SaveMemory = "save_memory",
     GetMemory = "get_memory",
     MemoryData = "memory_data",
-    ActionResponse = "action_response"
+    ActionResponse = "action_response",
 }
 
-/*
-    "1. \"search_internet\" - { \"type\": \"search_internet\", \"parameters\": { \"query\": \"your search query\" } }\n",
-    "2. \"search_results\" - { \"type\": \"search_results\", \"parameters\": { \"results\": [ \"an array of search results, or undefined if no results were found\" ] } }\n",
-    "3. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
-    "4. \"website_response\" - { \"type\": \"website_response\", \"parameters\": { \"html\": \"the html of the website you had just searched\" } }\n",
-    "5. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }\n",
-    "6. \"ask_question\" - { \"type\": \"ask_question\", \"parameters\": { \"question\" \"the question you want to ask the user\" } }\n",
-    "7. \"save_memory\" - { \"type\": \"save_memory\", \"parameters\": { data: { \"the information you want to save, typically an object\" } }\n",
-    "8. \"delete_memory\" - { \"type\": \"save_memory\", \"parameters\": { data: [ \"an array of the ids of the memories you want to delete\" ] }\n",
-    "9. \"get_memory\" - { \"type\": \"get_memory\", \"parameters\": undefined }\n",
-    "10. \"memory_data\" - { \"type\": \"memory_data\", \"parameters\": { data: [ \"an array of the memories you have of this user or content you requested\" ]\n",
-    */
-
 export interface Task {
-    type: TaskType
+    type: TaskType;
     parameters?: any;
 }

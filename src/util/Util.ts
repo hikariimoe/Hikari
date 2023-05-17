@@ -18,61 +18,23 @@ export class Util {
     }
 
     static shrink<T extends object>(obj: T, destruct: boolean = true): T | null {
-        if (!obj) {
-            return null;
+        const clone = {} as Record<any, any>;
+        const object = destruct ? Util.destructure(obj) : obj;
+
+        for (const [key, value] of Object.entries(object)) {
+            if (typeof value == "undefined" || value == null)
+                continue;
+
+            clone[key] = Array.isArray(value)
+                ? value.filter(
+                    x => typeof x != "undefined" && x != null
+                ).map(x => typeof x == "object" ? this.shrink(x) : x)
+                : typeof value == "object"
+                ? this.shrink(value)
+                : value;
         }
 
-        // Certain objects can be very dense and wasteful of tokens, so this
-        // function exists to deeply sanitize them and omit every possible
-        // property that returns null, or is an empty object/array.
-        
-        if (destruct == true) {
-            obj = Util.destructure(obj);
-        }
-
-        const ret: Record<keyof T, any> = deepClone(obj);
-
-        for (const key of Object.keys(obj)) {
-            let value = obj[key as keyof T] as unknown as any;
-
-            // If the value is an object, recursively sanitize it.
-            if (typeof value === "object") {
-                value = this.shrink(value as object) as unknown as any;
-            }
-
-            // If the value is an array, recursively sanitize it.
-            if (Array.isArray(value)) {
-                let newArray: any[] = [];
-                for (let v of value) {
-                    if (v === null) {
-                        continue;
-                    }
-
-                    if (typeof v === "object") {
-                        v = this.shrink(v as object) as unknown as any;
-                    }
-
-                    newArray.push(v);
-                }
-
-                value = newArray;
-            }
-
-            // Then handle the value after.
-            if (value === null) {
-                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                delete ret[key as keyof T];
-            } else if (Array.isArray(value) && value.length === 0) {
-                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                delete ret[key as keyof T];
-            } else if (typeof value === "object" && Object.keys(value).length === 0) {
-                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                delete ret[key as keyof T];
-            }
-
-        }
-        
-        return ret;
+        return clone;
     }
 
     static destructure(obj: object) {

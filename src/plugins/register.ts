@@ -1,5 +1,8 @@
 import { preGenericsInitialization } from "@sapphire/framework";
-import { Hikari } from "../Hikari";
 import { LoggerPlugin } from "./LoggerPlugin";
+import { Hikari } from "../Hikari";
 
-Hikari.plugins.registerPreGenericsInitializationHook(LoggerPlugin[preGenericsInitialization], "Logger-PreGenericsInitialization");
+Hikari.plugins.registerPreGenericsInitializationHook(
+    LoggerPlugin[preGenericsInitialization],
+    "Logger-PreGenericsInitialization"
+);

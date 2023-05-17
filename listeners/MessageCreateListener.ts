@@ -15,18 +15,11 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
     }
 
     public async run(message: Message) {
-        if (message.author.bot || message.webhookId) {
-            // Don't process messages from bots or webhooks.
-            return;
-        }
-
-        // Process the message.
         await this.processMessage(message);
     }
 
     private async processMessage(message: Message) {
         if (!await this.canProcessMessage(message)) {
-            // Don't process messages that the bot can't process.
             return;
         }
 
@@ -62,23 +55,15 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
     }
 
     private async canProcessMessage(message: Message) {
-        if (isDMChannel(message.channel)) {
-            // Don't process messages in DMs (for now)
+        if (message.author.bot || isDMChannel(message.channel) || !message.channel.isTextBased())
             return false;
-        }
 
-        if (!message.channel.isTextBased()) {
-            // Don't process messages in non-text channels.
-            return false;
-        }
+        const me = await message.guild?.members.fetchMe();
 
-        const self = await message.guild?.members.fetchMe();
-
-        if (!self || !message.channel.permissionsFor(self).has([
+        if (!me || !message.channel.permissionsFor(me).has([
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.ViewChannel
         ], true)) {
-            // Don't process messages if the bot can't properly read the channel.
             return false;
         }
 

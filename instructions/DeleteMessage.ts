@@ -5,8 +5,6 @@ import { Context, ContextEvent } from "../src/ai/Context";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 
-const prisma = new PrismaClient();
-
 export class SaveMemoryInstruction extends Instruction {
     constructor(context: Piece.Context, options: InstructionOptions) {
         super(context, {

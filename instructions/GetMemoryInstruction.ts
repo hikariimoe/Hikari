@@ -1,9 +1,9 @@
+import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Task, TaskType } from "../src/structures/ai/Task";
+import { Context, ContextEvent } from "../src/ai/Context";
 import { PrismaClient } from "@prisma/client";
 import { Piece } from "@sapphire/pieces";
 import { Message } from "discord.js";
-import { Context, ContextEvent } from "../src/ai/Context";
-import { Task, TaskType } from "../src/structures/ai/Task";
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 
 const prisma = new PrismaClient();
 

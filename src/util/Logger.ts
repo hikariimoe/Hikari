@@ -1,5 +1,6 @@
 import { Logger as BuiltinLogger, LogLevel } from "@sapphire/framework";
 import chalk from "chalk";
+
 import type { Hikari } from "../Hikari";
 
 export const LoggerColors = {
@@ -27,13 +28,12 @@ export class Logger extends BuiltinLogger {
     }
 
     write(level: LogLevel, ...values: readonly unknown[]): void {
-        if (this.level > level) {
-            return;
-        }
-
-        const formatter = this.formats.get(level) ?? this.formats.get(this.level);
-
-        console.log(this.preprocess(formatter ?? "", values));
+        // if (this.level <= level) {
+            console.log(this.preprocess(
+                this.formats.get(level) ?? this.formats.get(this.level) ?? "",
+                values
+            ));
+        // }
     }
 
     /**
@@ -61,29 +61,38 @@ export class Logger extends BuiltinLogger {
             format = format.replace("{title}", "Bot");
         }
 
-
         return format.replace("{date}", date).replace("{values}", newValues.join(" "));
-
     }
 
     private createFormatMap() {
-        return new Map<LogLevel, string>(Object.keys(LogLevel)
-            .map((key) => {
-                const enumKey = key as keyof typeof LogLevel;
-                const isValueProperty = Number.isNaN(Number(enumKey));
+        return new Map<LogLevel, string>(
+            Object.keys(LogLevel).map((k) => {
+                const key = k as keyof typeof LogLevel;
+                const isValueProperty = Number.isNaN(Number(key));
 
                 if (!isValueProperty) {
-                    return [LogLevel[key as keyof typeof LogLevel], ""];
+                    return [LogLevel[key], ""];
+                } else {
+                    return [LogLevel[key], this.getFormatString(key)];
                 }
-
-                return [LogLevel[key as keyof typeof LogLevel], this.getFormatString(key as keyof typeof LogLevel)];
-            }));
+            })
+        );
     }
 
     private getFormatString(level: keyof typeof LogLevel) {
         const color = LoggerColors[level.toLowerCase() as keyof typeof LoggerColors];
         const bubbleColor = ErrorLevels.includes(level) ? "#ff6e6e" : "#6eff6e";
 
-        return `${chalk.hex(bubbleColor)("•")} ${chalk.bgHex(color).bold(` ${level.toUpperCase()} `)} ${chalk.hex("#484a49").italic("{date}")} ${chalk.hex("#a4aefc")("{title}")} • ${chalk.hex("#fafafa")("{values}")}`;
+        return `${
+            chalk.hex(bubbleColor)("•")
+        } ${
+            chalk.bgHex(color).bold(` ${level.toUpperCase()} `)
+        } ${
+            chalk.hex("#484a49").italic("{date}")
+        } ${
+            chalk.hex("#a4aefc")("{title}")
+        } • ${
+            chalk.hex("#fafafa")("{values}")
+        }`;
     }
 }

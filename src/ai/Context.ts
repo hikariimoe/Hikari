@@ -1,11 +1,9 @@
+import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
 import { Message, TextBasedChannel } from "discord.js";
-import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, CreateChatCompletionResponse } from "openai";
 import { Task, TaskType } from "../structures/ai/Task";
+import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
 import { Agent } from "./Agent";
-import { jsonrepair } from 'jsonrepair'
-import type { AxiosResponse } from "axios"; // imagine having to import an entire request framework just for a type
-import { match } from "assert";
 
 export interface ContextEvent {
     text?: string;
@@ -18,20 +16,21 @@ export interface ContextEvent {
 
 export const IgnoreTaskTypes: TaskType[] = [TaskType.UploadImage];
 
+// this file is GIGANTIC lmao
+// lmao i wonder why
+// gonna check this later
+
 /**
  * An instance of a Discord channel, with context of everything that has happened in it.
+ * 
+ * TODO: this really needs a detailed explanation tbh
  */
 export class Context {
     public channel: TextBasedChannel;
-
     public agent: Agent;
-
     public events: Set<ContextEvent>;
-
     public ratelimited: boolean = false;
-
     public handling: boolean = false;
-
     public currentMessage: Message | undefined;
 
     constructor(agent: Agent, channel: TextBasedChannel) {
@@ -57,10 +56,10 @@ export class Context {
             } catch (e: any) {
                 if (e.response && e.response.status === 429) {
                     this.ratelimited = true;
-                    let until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
+                    const until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
 
                     let rl: Message | undefined;
-                    if (sendReply == true) {
+                    if (sendReply) {
                         rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
                     }
 
@@ -77,7 +76,7 @@ export class Context {
 
             let result = "";
             let sentQueueMessage = false;
-            let queueMessage: Message | undefined;
+            let queueMessage: Message | undefined;``
             // @ts-ignore
             // don't think there's a type for this lol 
             completionStream?.data.on("data", async (data: Buffer) => {
@@ -453,7 +452,7 @@ export class Context {
 
     private async parseMessage(message: Message): Promise<ContextEvent> {
         let event: ContextEvent = {
-            text: message.content,
+            text: message.cleanContent,
             message_id: message.id,
             username: message.author.username,
             attempts: 0
