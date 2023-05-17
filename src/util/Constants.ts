@@ -9,12 +9,17 @@ export interface HikariTomlOptions {
         information: {
             bot_name: string;
             prompt: string[];
-        }
+        };
+
+        whitelist: {
+            enabled: true;
+            channels: string[];
+        };
 
         keys: {
             saucenao: string;
             wolfram_alpha: string;
-        }
+        };
     };
 
     proxy: {

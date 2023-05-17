@@ -3,6 +3,7 @@
 import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
 import { Message, PermissionFlagsBits, } from "discord.js";
+import type { Hikari } from "../src/Hikari";
 import { HikariListener } from "../src/structures/HikariListener";
 import { Events } from "../src/util/Events";
 
@@ -30,7 +31,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
             // Check if the message starts with a supported prefix.
             const prefixes = await this.container.client.fetchPrefix(message);
             const prefixFound = this.checkPrefix(message, prefixes);
-    
+
             if (prefixFound) {
                 return this.container.client.emit(Events.CommandRun, message, prefixFound);
             }
@@ -58,6 +59,12 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         if (message.author.bot || isDMChannel(message.channel) || !message.channel.isTextBased())
             return false;
 
+        const client: Hikari = this.container.client;
+
+        if (client.configuration.bot.whitelist.enabled && !client.configuration.bot.whitelist.channels.includes(message.channel.id)) {
+            return false;
+        }
+
         const me = await message.guild?.members.fetchMe();
 
         if (!me || !message.channel.permissionsFor(me).has([
@@ -69,33 +76,39 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
 
         return true;
     }
-    
+
     // https://github.com/sapphiredev/framework/blob/main/src/optional-listeners/message-command-listeners/CorePreMessageParser.ts#LL55-L78C3
     // TODO: Make this better and less ugly.
     private checkMentionPrefix(message: Message): string | null {
-		if (this.container.client.disableMentionPrefix) return null;
-		// If the content is shorter than 20 characters, or does not start with `<@` then skip early:
-		if (message.content.length < 20 || !message.content.startsWith("<@")) return null;
+        // (its shorter now but still ugly LMAO)
+        const mention = message.content.match(/^<@&?(\d+)>/);
+        return this.container.client.disableMentionPrefix && mention && (
+            mention[1] == this.container.client.id
+            || mention[1] == message.guild?.roles.botRoleFor(this.container.client.id!)?.id
+        ) ? mention[0] : null;
 
-		// Calculate the offset and the ID that is being provided
-		const [offset, id] =
-			message.content[2] === "&"
-				? [3, message.guild?.roles.botRoleFor(this.container.client.id!)?.id]
-				: [message.content[2] === "!" ? 3 : 2, this.container.client.id];
+        // // If the content is shorter than 20 characters, or does not start with `<@` then skip early:
+        // if (message.content.length < 20 || !message.content.startsWith("<@")) return null;
 
-		if (!id) return null;
+        // // Calculate the offset and the ID that is being provided
+        // const [offset, id] =
+        // 	message.content[2] === "&"
+        // 		? [3, message.guild?.roles.botRoleFor(this.container.client.id!)?.id]
+        // 		: [message.content[2] === "!" ? 3 : 2, this.container.client.id];
 
-		const offsetWithId = offset + id.length;
+        // if (!id) return null;
 
-		// If the mention doesn"t end with `>`, skip early:
-		if (message.content[offsetWithId] !== ">") return null;
+        // const offsetWithId = offset + id.length;
 
-		// Check whether or not the ID is the same as the managed role ID:
-		const mentionId = message.content.substring(offset, offsetWithId);
-		if (mentionId === id) return message.content.substring(0, offsetWithId + 1);
+        // // If the mention doesn"t end with `>`, skip early:
+        // if (message.content[offsetWithId] !== ">") return null;
 
-		return null;
-	}
+        // // Check whether or not the ID is the same as the managed role ID:
+        // const mentionId = message.content.substring(offset, offsetWithId);
+        // if (mentionId === id) return message.content.substring(0, offsetWithId + 1);
+
+        // return null;
+    }
 
     private checkPrefix(message: Message, prefixes: string | readonly string[] | null): string | null {
         if (prefixes === null) {
@@ -108,7 +121,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
             return message.content.startsWith(prefixes) ? prefixes : null;
         }
 
-		const { caseInsensitivePrefixes } = this.container.client.options;
+        const { caseInsensitivePrefixes } = this.container.client.options;
         return prefixes.find((prefix) => message.content.startsWith(caseInsensitivePrefixes ? prefix.toLowerCase() : prefix)) ?? null;
     }
 }

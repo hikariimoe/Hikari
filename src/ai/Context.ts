@@ -4,6 +4,7 @@ import { Task, TaskType } from "../structures/ai/Task";
 import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
 import { Agent } from "./Agent";
+import { JSONUtil } from "../util/JSONUtil";
 
 export interface ContextEvent {
     text?: string;
@@ -76,7 +77,7 @@ export class Context {
 
             let result = "";
             let sentQueueMessage = false;
-            let queueMessage: Message | undefined;``
+            let queueMessage: Message | undefined; ``
             // @ts-ignore
             // don't think there's a type for this lol 
             completionStream?.data.on("data", async (data: Buffer) => {
@@ -297,6 +298,13 @@ export class Context {
             if (json.action == "null") {
                 json.action = null;
             } else {
+                let stringified = JSONUtil.tryParse(json.action);
+
+                if (stringified) {
+                    // this is rare but wow
+                    json = stringified
+                }
+
                 if (json.parameters) {
                     json.action = {
                         type: json.action,
@@ -419,18 +427,27 @@ export class Context {
                     this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has an image(s) attached to it, so we're sending it as a file.");
                 }
 
-                const m = await message.reply({
-                    content: content,
-                    files: json.action && urls ? urls.map((x: string) => {
-                        // get the file name out of the url
-                        const fileName = x.split("/").pop();
+                let m: Message | undefined;
+                try {
+                    m = await message.reply({
+                        content: content,
+                        files: json.action && urls ? urls.map((x: string) => {
+                            // get the file name out of the url
+                            const fileName = x.split("/").pop();
 
-                        return {
-                            attachment: x,
-                            name: fileName
-                        }
-                    }) : undefined
-                });
+                            return {
+                                attachment: x,
+                                name: fileName
+                            }
+                        }) : undefined
+                    });
+                } catch (e) {
+                    this.handling = false;
+                    this.agent.logger.error("Agent: AI failed to send message, likely due to an improper response.");
+
+                    // It's fine to rehandle this message.
+                    return await this.handle(message, event);
+                }
 
                 json.message_id = m.id;
             }

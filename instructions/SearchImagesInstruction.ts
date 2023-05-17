@@ -31,15 +31,18 @@ export class SearchWebInstruction extends Instruction {
             return {
                 attempts: 0,
                 action: {
-                    type: TaskType.ImageResults,
+                    type: TaskType.ActionResponse,
                     parameters: {
-                        type: "gelbooru",
-                        results: images.map((post) => ({
-                            id: post.id,
-                            url: post.fileUrl,
-                            tags: post.tags,
-                            rating: post.rating
-                        }))
+                        action: TaskType.SearchImages,
+                        response: {
+                            type: "gelbooru",
+                            results: images.map((post) => ({
+                                id: post.id,
+                                url: post.fileUrl,
+                                tags: post.tags,
+                                rating: post.rating
+                            }))
+                        }
                     }
                 }
             }
