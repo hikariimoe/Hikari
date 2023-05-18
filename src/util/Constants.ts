@@ -1,5 +1,6 @@
 import { LogLevel } from "@sapphire/framework";
 
+// TODO: Document these lol
 export interface HikariTomlOptions {
     bot: {
         token: string;
@@ -13,9 +14,17 @@ export interface HikariTomlOptions {
         };
 
         whitelist: {
-            enabled: true;
+            enabled: boolean;
             channels: string[];
+            users: string[];
         };
+
+        blacklist: {
+            enabled: boolean;
+            blacklist_only_dms: boolean;
+            channels: string[];
+            users: string[];
+        }
 
         keys: {
             saucenao: string;

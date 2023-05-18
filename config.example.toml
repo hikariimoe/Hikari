@@ -86,9 +86,7 @@ banned_words = []
 [bot.whitelist]
 enabled = true
 
-channels = [
-    "1108445387943067788"
-]
+channels = []
 
 users = [
 
@@ -96,7 +94,7 @@ users = [
 
 [bot.blacklist]
 enabled = true
-blacklist_dms_only = true # What this does is explained later.
+blacklist_dms = false # What this does is explained later.
 
 channels = [
 

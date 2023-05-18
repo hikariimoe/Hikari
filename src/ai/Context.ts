@@ -47,13 +47,14 @@ export class Context {
             this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
             let completionStream: any;
             try {
-                completionStream = await this.agent.ai?.createChatCompletion({
+                completionStream = (await this.agent.ai?.createChatCompletion({
                     model: model,
                     stream: true,
                     messages: prompts
                 }, {
                     responseType: "stream"
-                });
+                }))?.data.choices[0].message?.content
+                
             } catch (e: any) {
                 if (e.response && e.response.status === 429) {
                     this.ratelimited = true;

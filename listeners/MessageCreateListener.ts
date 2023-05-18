@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { Message, PermissionFlagsBits, } from "discord.js";
+import { Message } from "discord.js";
 import { HikariListener } from "../src/structures/HikariListener";
 import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
@@ -9,6 +9,7 @@ import { Events } from "../src/util/Events";
 import type { Hikari } from "../src/Hikari";
 
 export class MessageCreateListener extends HikariListener<typeof Events.MessageCreate> {
+    private config = this.container.client.configuration.bot;
     public constructor(context: Listener.Context, options: Listener.Options) {
         super(context, {
             ...options,
@@ -20,21 +21,31 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         if (!this.canProcessMessage(message)) {
             return;
         }
-
-        if (message.channel.isDMBased() && message.author.id != "1108531706526437376") {
-            return;
-        }
-
-        console.log("m")
     
         const prefixes = await this.container.client.fetchPrefix(message);
         const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
         
         if (prefix && prefix.length != message.content.length) {
+            if (message.channel.isDMBased()) {
+                return;
+            }
+
             return this.container.client.emit(Events.CommandRun, message, prefix);
         } else {
+            if ((message.channel.isDMBased() && !this.config.whitelist.users.includes(message.author.id))
+                || message.channel.isDMBased() && this.config.blacklist.users.includes(message.author.id)
+                || !message.channel.isDMBased() && !this.config.blacklist.blacklist_only_dms && this.config.blacklist.users.includes(message.author.id)) {
+                return;
+            }
+            if ((this.config.whitelist.enabled == true && !this.config.whitelist.users.includes(message.author.id))
+                || this.config.blacklist.channels.includes(message.channel.id)) {
+                return;
+            }
+
+            // idk if any of the above works
 
             const ctx = await this.container.client.agent.context(message.channel);
+
             try {
                 await ctx?.handle(message);
             } catch (e) {
