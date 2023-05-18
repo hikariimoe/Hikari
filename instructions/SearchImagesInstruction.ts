@@ -21,7 +21,7 @@ export class SearchWebInstruction extends Instruction {
             console.log(event.parameters);
             const images = await this.booru.search(
                 event.parameters.query.split(" "), {
-                    limit: typeof event.parameters.limit === "number"
+                    limit: typeof event.parameters.limit == "number"
                         ? event.parameters.limit
                         : 5,
                     random: true

@@ -13,6 +13,8 @@ intents = [
     # Intents suck
     "DirectMessageReactions",
     "DirectMessages",
+    "DirectMessageTyping",
+    "DirectMessageReactions",
     "GuildMembers",
     "GuildMessageReactions",
     "GuildMessages",
@@ -23,6 +25,141 @@ intents = [
 # The limit to everything that can be retained in the memory of the bot.
 context_memory_limit=10
 
+[bot.information]
+bot_name = "Hikari"
+
+# This is the base prompt that the bot will use to generate
+# responses. You can use this to make the bot more personal,
+# or to make it more unique to your own usecase.
+
+# Allowed placeholders:
+#   - %bot_name% (the name of the bot)
+
+prompt = [
+    # TODO: Base prompt for hikari that isn't
+    #      just a copy of the base prompt for
+    #      my production copy.
+    "You are %bot_name%, an kind and cuddly anime chatbot that loves to talk about anything, with anyone.",
+]
+
+# TODO: Find a reason for this to exist.
+# FUTURE TODO:
+# I found a reason, and it's
+# to be able to privately fuck the AI
+# or have close non-sexual conversations
+# with your AI without anyone's
+# watchful eye,
+
+# because you know that people will
+# judge you for trying to make a AI
+# your girlfriend.
+
+# You must browse 4chan.
+
+# Whatever the case, I won't judge you,
+# because I'm not any better than you.
+
+# Except for the /d/egens.
+# I'm just curious.
+dm_prompt = []
+
+# Just incase you want to completely harass the bot with
+# a reminder in its prompt to not be brutally explicit
+# in safe for work channels.
+
+# This gets added to the end of the prompt whenever it's
+# in a safe for work channel.
+sfw_addendum = [
+
+]
+
+# We learned that GPT-4 can be a bit of a bitch when it
+# comes to the fact that for some reason, she likes
+# fuckin' helluva boss.
+
+# I thought it was the proxy we were using, but
+# turns out its a unique quirk of GPT-4 lmao
+
+# So, we're banning itttt~
+banned_words = []
+
+[bot.whitelist]
+enabled = true
+
+channels = [
+    "1108445387943067788"
+]
+
+users = [
+
+]
+
+[bot.blacklist]
+enabled = true
+blacklist_dms_only = true # What this does is explained later.
+
+channels = [
+
+]
+
+# WARNING: This will also prevent the AI from
+#          being able to see any messages from
+#          this user as well, but you can
+#          disable that if you just dont want
+#          them to DM the bot.
+users = [
+
+]
+
+[bot.ai]
+# These are all AI options, which are used to configure the
+# AI itself. This includes the temperature, the top p, the
+# frequency penalty, and the presence penalty, as well as
+# enabling image generation via a model for these purposes.
+
+# Whether or not to use the API for image generation.
+# This requires the AUTOMATIC1111/stable-diffusion-webui
+# repository to be running, with the --api option to enable
+# the API.
+[bot.ai.images]
+enabled = false
+api_url = "" 
+
+[bot.keys]
+saucenao="" # Obtainable from https://saucenao.com/user.php
+wolfram_alpha="" # Obtainable from https://products.wolframalpha.com/api
+openai="" # Obtainable from https://platform.openai.com
+
+
+[proxy]
+# Because we do not really like OpenAI, we use a proxy; as well
+# as the base service. Here, you can provide all of the unique
+# proxies that you prefer, including the base server itself.
+
+# You are also able to specify which model you would like to
+# use, but preferrably; gpt-4 is the best option.
+model = "gpt-4"
+
+# Whether or not to use a proxy. If you do not want to use
+# a proxy, you can disable it here.
+
+# Who knows if OpenAI will ever block proxies, but it's
+# better to be safe than sorry.
+use_proxy = true
+
+# Certain proxies may log prompts and potential responses, so
+# you can disable logging to ensure your privacy is kept.
+no_loggers = true
+
+preferred_proxies = [
+]
+
+[proxy.keys]
+"preferred proxy url"="key"
+"preferred proxy url 2"="key"
+
+
+[logger]
 # The highest level of logging, which is the most verbose and
 # detailed that the bot will output. This is useful for when
 # you are debugging the bot, or trying to find out what is
@@ -36,34 +173,4 @@ context_memory_limit=10
 #   - Error
 #   - Fatal
 #   - None (least verbose)
-logging_level = "Info"
-
-[bot.information]
-bot_name = "Hikari"
-
-# This is the base prompt that the bot will use to generate
-# responses. You can use this to make the bot more personal,
-# or to make it more unique to your own usecase.
-
-# Allowed placeholders:
-#   - %bot_name% (the name of the bot)
-
-prompt = [
-    "You are %bot_name%, a bot that is able to talk to people and learn from them.",
-]
-
-
-[proxy]
-# Because we do not really like OpenAI, we use a proxy; as well
-# as the base service. Here, you can provide all of the unique
-# proxies that you prefer, including the base server itself.
-
-# You are also able to specify which model you would like to
-# use, but preferrably; gpt-4 is the best option.
-model = "gpt-3.5-turbo"
-
-# Certain proxies may log prompts and potential responses, so
-# you can disable logging to ensure your privacy is kept.
-no_loggers = true
-
-preferred_proxies = []
+level = "Trace"

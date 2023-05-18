@@ -1,5 +1,5 @@
-import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
-import { Message, TextBasedChannel } from "discord.js";
+import { ChatCompletionRequestMessage } from "openai";
+import { Message, TextBasedChannel, ChannelType } from "discord.js";
 import { Task, TaskType } from "../structures/ai/Task";
 import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
@@ -74,6 +74,7 @@ export class Context {
                     }, until);
                 } else {
                     this.agent.logger.error("Agent: Error while creating completion request:", e);
+                    console.log(e.response.data)
                     reject(undefined);
                 }
             }
@@ -156,9 +157,8 @@ export class Context {
     }
 
     async handle(message: Message, event?: ContextEvent, toEdit?: Message): Promise<ContextEvent | undefined> {
-        if (!event) {
-            event = await this.parseMessage(message);
-        }
+        event ??= await this.parseMessage(message);
+        
         if (this.ratelimited || this.handling) {
             this.events.add(event);
             return;
@@ -168,44 +168,44 @@ export class Context {
         this.handling = true;
 
         if (event.attempts === 0) {
-            this.agent.logger.info("Agent: Handling context", this.agent.logger.color.hex("#7dffbc")(message.channel.id), "for message", this.agent.logger.color.hex("#7dffbc")(message.id));
-            this.agent.logger.debug("Agent: Event data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(event)));
-        }
-
-
-        let role: ChatCompletionRequestMessageRoleEnum;
-        if (!event.username) {
-            role = "system";
-        } else if (event.username === this.agent.name) {
-            role = "assistant";
-        } else {
-            role = "user";
+            this.agent.logger.info(
+                "Agent: Handling context",
+                this.agent.logger.color.hex("#7dffbc")(message.channel.id),
+                "for message",
+                this.agent.logger.color.hex("#7dffbc")(message.id)
+            );
+            this.agent.logger.debug(
+                "Agent: Event data:",
+                this.agent.logger.color.hex("#ff7de3")(JSON.stringify(event))
+            );
         }
 
         const prompts: ChatCompletionRequestMessage[] = [{
             role: "system",
-            content: this.agent.prompt
+            content: message.channel.type == ChannelType.DM ? this.agent.dm_prompt.replace("%user_name%", message.author.username) : this.agent.prompt
         }];
 
-        this.events.forEach((val) => {
-            let eventRole: ChatCompletionRequestMessageRoleEnum;
-            if (!val.username) {
-                eventRole = "system";
-            } else if (val.username === this.agent.name) {
-                eventRole = "assistant";
-            } else {
-                eventRole = "user";
-            }
-
-            prompts.push(
-                {
-                    role: eventRole,
-                    content: JSON.stringify(Util.omit(val, ["attempts"]))
-                });
+        this.events.forEach((event) => {
+            prompts.push({
+                role: (
+                    !event.username
+                    ? "system"
+                    : event.username == this.agent.name
+                    ? "assistant"
+                    : "user"
+                ),
+                content: JSON.stringify(Util.omit(event, ["attempts"]))
+            });
         });
 
         prompts.push({
-            role: role,
+            role: (
+                !event.username
+                ? "system"
+                : event.username == this.agent.name
+                ? "assistant"
+                : "user"
+            ),
             content: JSON.stringify(Util.omit(event, ["attempts"]))
         });
 
@@ -338,7 +338,6 @@ export class Context {
             if (IgnoreTaskTypes.includes(json.action.type)) {
                 this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it, but it was ignored.");
             } else {
-
                 this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
                 this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
                 this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
@@ -369,36 +368,32 @@ export class Context {
                         postEvent.attempts = 1;
                         this.handling = false;
 
-                        await this.handle(message, postEvent);
+                        return await this.handle(message, postEvent);
                     } else {
                         this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");
                     }
-
-                    sent = true;
                 } else {
                     // Invalid action.
                     this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
                     this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
+
+                    json.action = null;
                 }
 
-                if (sent) {
-                    return;
-                }
             }
         }
 
         if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
             const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
-
+            
             let removed = 0;
             for (const event of this.events.values()) {
-                if (removed === toRemove) {
+                if (removed == toRemove) {
                     break;
                 }
 
                 this.events.delete(event);
-
-                removed += 1;
+                removed++;
             }
         }
 
@@ -409,7 +404,6 @@ export class Context {
             // Get mentions from the message.
             // they're @Username, so we need to convert them to <@ID>
             const regex = /@(\w+)/;
-
             let matches = regex.exec(content);
 
             while (matches) {
@@ -418,7 +412,7 @@ export class Context {
                 if (user) {
                     content = content.replace(new RegExp(`@${user.username}`), `<@${user.id}>`);
                 }
-
+                
                 matches = regex.exec(content);
             }
 
@@ -471,30 +465,12 @@ export class Context {
     }
 
     private async parseMessage(message: Message): Promise<ContextEvent> {
-        let event: ContextEvent = {
+        const event: ContextEvent = {
             text: message.cleanContent,
             message_id: message.id,
             username: message.author.username,
             attempts: 0
         };
-
-        // Filter mentions into usernames.
-        if (message.mentions.users.size > 0) {
-            // Parse <@!123456789> into @username
-            const regex = /<@!?(\d+)>/g;
-            let matches = message.content.match(regex);
-
-            if (matches) {
-                matches.forEach((match) => {
-                    const id = match.replace(/<@!?(\d+)>/, "$1");
-                    const user = message.mentions.users.get(id);
-
-                    if (user) {
-                        event.text = event.text?.replace(match, `@${user.username}`);
-                    }
-                });
-            }
-        }
 
         if (message.attachments.size > 0) {
             const attachment = message.attachments.first();
@@ -502,7 +478,7 @@ export class Context {
             if (attachment?.name.endsWith(".png") || attachment?.name.endsWith(".jpg") || attachment?.name.endsWith(".jpeg")) {
                 this.agent.logger.debug("Agent: Message", this.agent.logger.color.hex("#7dffbc")(message.id), "contains an image, so we're going to try to parse it.");
 
-                let url = new URL("https://saucenao.com/search.php");
+                const url = new URL("https://saucenao.com/search.php");
                 url.search = new URLSearchParams({
                     api_key: this.agent.client.configuration.bot.keys.saucenao,
                     db: "999",
@@ -510,18 +486,18 @@ export class Context {
                     url: attachment.url
                 }).toString();
 
-                let naoResponse = await fetch(url, { method: "GET" });
+                const naoResponse = await fetch(url, { method: "GET" });
 
                 if (naoResponse.status !== 200) {
                     // todo: handle this?
                     return event;
                 }
 
-                let resJson = await naoResponse.json();
-                let sortedResults = resJson.results.sort((a: any, b: any) => parseFloat(b.header.similarity) - parseFloat(a.header.similarity));
-                let first = sortedResults[0];
+                const resJson = await naoResponse.json();
+                const sortedResults = resJson.results.sort((a: any, b: any) => parseFloat(b.header.similarity) - parseFloat(a.header.similarity));
+                const first = sortedResults[0];
 
-                let similarity = parseFloat(first.header.similarity);
+                const similarity = parseFloat(first.header.similarity);
                 let finalString = "";
 
                 if (similarity >= 90 && first.data != null) {
@@ -533,9 +509,8 @@ export class Context {
                         role: "user",
                         content: `${JSON.stringify(first.data)}${tags.length > 0 ? `\n\n${tags.join(", ")}` : ""}`
                     }], false, "gpt-3.5-turbo"); // Enforce gpt-3.5 because gpt-4 is expensive and this ain't rly that bulky of a request tbh
-
                 } else {
-                    let tags = await this.getTags(attachment.url, attachment.name);
+                    const tags = await this.getTags(attachment.url, attachment.name);
 
                     if (tags.length > 0) {
                         finalString = await this.handleCompletion([{
@@ -570,24 +545,24 @@ export class Context {
     private async getTags(url: string, filename: string) {
         this.agent.logger.debug("Agent: Getting tags for image", this.agent.logger.color.hex("#7dffbc")(url));
 
-        let image = await fetch(url, { method: "GET" });
+        const image = await fetch(url, { method: "GET" });
+        const formData = new FormData();
 
-        let formData = new FormData();
         formData.append("format", "json");
         formData.append("file", await image.blob(), filename);
 
-        let resp = await (await fetch("https://autotagger.donmai.us/evaluate", {
+        const resp = await (await fetch("https://autotagger.donmai.us/evaluate", {
             method: "POST",
             body: formData
         })).json();
 
-        let tags = [];
+        const tags = [];
 
         for (const tag of Object.keys(resp[0].tags)) {
             if (tag.startsWith("rating:"))
                 continue;
 
-            let tagSimilarity = resp[0].tags[tag];
+            const tagSimilarity = resp[0].tags[tag];
 
             if (tagSimilarity >= 0.5)
                 tags.push(tag);

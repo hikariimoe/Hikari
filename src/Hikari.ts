@@ -5,6 +5,7 @@ import { getRootData } from "@sapphire/pieces";
 import { Logger } from "./util/Logger";
 import { join as pjoin } from "path";
 import { Agent } from "./ai/Agent";
+import { Partials } from "discord.js";
 
 type SapphireOptionsWithIntents = SapphireClientOptions & {
     intents: number | number[]
@@ -21,7 +22,12 @@ export class Hikari extends SapphireClient {
         options: SapphireOptionsWithIntents = { intents: [] },
         configuration: HikariTomlOptions
     ) {
-        super(options);
+        super({
+            ...options,
+            partials: [
+                Partials.Channel
+            ]
+        });
 
         this.configuration = configuration;
         this.logger = new Logger(this);

@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
+import { Message, PermissionFlagsBits, } from "discord.js";
+import { HikariListener } from "../src/structures/HikariListener";
 import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits, } from "discord.js";
-import type { Hikari } from "../src/Hikari";
-import { HikariListener } from "../src/structures/HikariListener";
 import { Events } from "../src/util/Events";
+
+import type { Hikari } from "../src/Hikari";
 
 export class MessageCreateListener extends HikariListener<typeof Events.MessageCreate> {
     public constructor(context: Listener.Context, options: Listener.Options) {
@@ -16,112 +17,86 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
     }
 
     public async run(message: Message) {
-        await this.processMessage(message);
-    }
-
-    private async processMessage(message: Message) {
-        if (!await this.canProcessMessage(message)) {
+        if (!this.canProcessMessage(message)) {
             return;
         }
 
-        let prefix: string | null = null;
-        if (this.checkMentionPrefix(message)) {
-            prefix = this.checkMentionPrefix(message);
-        } else {
-            // Check if the message starts with a supported prefix.
-            const prefixes = await this.container.client.fetchPrefix(message);
-            const prefixFound = this.checkPrefix(message, prefixes);
-
-            if (prefixFound) {
-                return this.container.client.emit(Events.CommandRun, message, prefixFound);
-            }
+        if (message.channel.isDMBased() && message.author.id != "1108531706526437376") {
+            return;
         }
 
-        if (prefix) {
-            if (prefix.length === message.content.length) {
-                // The message is just the prefix.
-                return;
-            }
-
+        console.log("m")
+    
+        const prefixes = await this.container.client.fetchPrefix(message);
+        const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
+        
+        if (prefix && prefix.length != message.content.length) {
             return this.container.client.emit(Events.CommandRun, message, prefix);
-        }
+        } else {
 
-        /// AI HANDLER
-        const ctx = await this.container.client.agent.context(message.channel);
-        try {
-            await ctx?.handle(message);
-        } catch (e) {
-            console.log(e);
+            const ctx = await this.container.client.agent.context(message.channel);
+            try {
+                await ctx?.handle(message);
+            } catch (e) {
+                console.log(e);
+            }
         }
     }
 
-    private async canProcessMessage(message: Message) {
-        if (message.author.bot || isDMChannel(message.channel) || !message.channel.isTextBased())
-            return false;
+    private canProcessMessage(message: Message) {
+        // Message can be processed if:
+        // - the author is not a bot
+        // - the message has been created in a guild
+        // - the current channel is text-based and not DM-based
+        // - the bot has permissions to send messages and view the current channel 
+        // Optionally checks if the current channel is whitelisted if the whitelist is enabled.
 
-        const client: Hikari = this.container.client;
-
-        if (client.configuration.bot.whitelist.enabled && !client.configuration.bot.whitelist.channels.includes(message.channel.id)) {
-            return false;
+        if (message.channel.isDMBased()) {
+            return true;
         }
 
-        const me = await message.guild?.members.fetchMe();
-
-        if (!me || !message.channel.permissionsFor(me).has([
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ViewChannel
-        ], true)) {
-            return false;
-        }
-
-        return true;
+        return (
+            !message.author.bot
+            && message.channel.isTextBased()
+            && (
+                this.container.client.configuration.bot.whitelist.enabled
+                ? this.container.client.configuration.bot.whitelist.channels.includes(message.channel.id)
+                : true
+            )
+        );
     }
 
-    // https://github.com/sapphiredev/framework/blob/main/src/optional-listeners/message-command-listeners/CorePreMessageParser.ts#LL55-L78C3
-    // TODO: Make this better and less ugly.
+    /**
+     * Checks if the message starts with a bot's mention. Returns the used prefix or null if didn't match.
+     */
     private checkMentionPrefix(message: Message): string | null {
+        // TODO: Make this better and less ugly.
         // (its shorter now but still ugly LMAO)
-        const mention = message.content.match(/^<@&?(\d+)>/);
+        const mention = message.content.match(/^<@[!&]?(\d+)>/);
         return this.container.client.disableMentionPrefix && mention && (
             mention[1] == this.container.client.id
             || mention[1] == message.guild?.roles.botRoleFor(this.container.client.id!)?.id
         ) ? mention[0] : null;
-
-        // // If the content is shorter than 20 characters, or does not start with `<@` then skip early:
-        // if (message.content.length < 20 || !message.content.startsWith("<@")) return null;
-
-        // // Calculate the offset and the ID that is being provided
-        // const [offset, id] =
-        // 	message.content[2] === "&"
-        // 		? [3, message.guild?.roles.botRoleFor(this.container.client.id!)?.id]
-        // 		: [message.content[2] === "!" ? 3 : 2, this.container.client.id];
-
-        // if (!id) return null;
-
-        // const offsetWithId = offset + id.length;
-
-        // // If the mention doesn"t end with `>`, skip early:
-        // if (message.content[offsetWithId] !== ">") return null;
-
-        // // Check whether or not the ID is the same as the managed role ID:
-        // const mentionId = message.content.substring(offset, offsetWithId);
-        // if (mentionId === id) return message.content.substring(0, offsetWithId + 1);
-
-        // return null;
     }
 
+    /**
+     * Checks if the message starts with a provided prefix(es). Returns the matched prefix or null if didn't match.
+     */
     private checkPrefix(message: Message, prefixes: string | readonly string[] | null): string | null {
-        if (prefixes === null) {
-            // No prefixes were found.
-            return null;
+        if (!prefixes) return null;
+        if (this.container.client.options.caseInsensitivePrefixes) {
+            const content = message.content.toLowerCase();
+            return (
+                typeof prefixes == "string"
+                ? content.startsWith(prefixes.toLowerCase()) && prefixes.toLowerCase()
+                : prefixes.find((x) => content.startsWith(x.toLowerCase()))
+            ) || null;
+        } else {
+            return (
+                typeof prefixes == "string"
+                ? message.content.startsWith(prefixes) && prefixes
+                : prefixes.find((x) => message.content.startsWith(x))
+            ) || null;
         }
-
-        if (typeof prefixes === "string") {
-            // Only one prefix was found.
-            return message.content.startsWith(prefixes) ? prefixes : null;
-        }
-
-        const { caseInsensitivePrefixes } = this.container.client.options;
-        return prefixes.find((prefix) => message.content.startsWith(caseInsensitivePrefixes ? prefix.toLowerCase() : prefix)) ?? null;
     }
 }

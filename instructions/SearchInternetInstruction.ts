@@ -1,6 +1,6 @@
 import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 import { Task, TaskType } from "../src/structures/ai/Task";
-import { Context, ContextEvent } from "../src/ai/Context";
+import { ContextEvent } from "../src/ai/Context";
 import { Piece } from "@sapphire/pieces";
 import { Util } from "../src/util/Util";
 import { Message } from "discord.js";
@@ -14,7 +14,7 @@ export class SearchWebInstruction extends Instruction {
         });
     }
 
-    async handle(_trigger: Message, event: Task, _context: Context): Promise<ContextEvent | undefined> {
+    async handle(_trigger: Message, event: Task): Promise<ContextEvent | undefined> {
         const results = await google.search(event.parameters.query, {
             page: 0,
             parse_ads: false,

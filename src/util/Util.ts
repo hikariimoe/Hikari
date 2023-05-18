@@ -18,23 +18,23 @@ export class Util {
     }
 
     static shrink<T extends object>(obj: T, destruct: boolean = true): T | null {
-        const clone = {} as Record<any, any>;
         const object = destruct ? Util.destructure(obj) : obj;
-
-        for (const [key, value] of Object.entries(object)) {
-            if (typeof value == "undefined" || value == null)
-                continue;
-
-            clone[key] = Array.isArray(value)
-                ? value.filter(
-                    x => typeof x != "undefined" && x != null
-                ).map(x => typeof x == "object" ? this.shrink(x) : x)
-                : typeof value == "object"
-                ? this.shrink(value)
-                : value;
+        
+        if (Array.isArray(object)) {
+            return object.filter(
+                (x) => typeof x != "undefined" && x != null
+            ).map((x) => typeof x == "object" ? this.shrink(x) : x) as T;
+        } else {
+            const clone = {} as Record<any, any>;
+            for (const [key, value] of Object.entries(object)) {
+                if (typeof value == "undefined" || value == null)
+                    continue;
+    
+                clone[key] = typeof value == "object" ? this.shrink(value) : value;
+            }
+    
+            return clone;
         }
-
-        return clone;
     }
 
     static destructure(obj: object) {

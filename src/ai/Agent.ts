@@ -15,6 +15,7 @@ export enum ProxyType {
 
 export interface Prompts {
     completion_prompt: string[];
+    private_completion_prompt: string[];
     image_curator_prompt: string[];
 }
 
@@ -28,6 +29,8 @@ export class Agent {
     public name: string;
     /** The configured prompt to use for the AI. */
     public prompt: string;
+    /** The configured prompt to use for the AI. */
+    public dm_prompt: string;
     /** All of the internal prompts used by the AI. */
     public internal_prompts: Prompts;
     /** The GPT model to use when creating completions.  */
@@ -53,6 +56,18 @@ export class Agent {
             this.client.configuration.bot.information.prompt.join(" ")
         }\n\n${
             this.internal_prompts.completion_prompt.join(" ")
+        }`;
+
+        if (this.client.configuration.bot.information.dm_prompt.length === 0) {
+            this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
+
+            this.client.configuration.bot.information.dm_prompt = this.client.configuration.bot.information.prompt;
+        }
+        
+        this.dm_prompt = `${
+            this.client.configuration.bot.information.dm_prompt.join(" ")
+        }\n\n${
+            this.internal_prompts.private_completion_prompt.join(" ")
         }`;
         
         this.openaiConfig = new Configuration();
@@ -95,6 +110,16 @@ export class Agent {
      * Attempts to set the proxy that's best suited for the client.
      */
     public async attemptSetProxy() {
+        if (this.client.configuration.proxy.use_proxy == false) {
+            this.logger.info("Agent: Proxy usage is disabled, so the agent will not attempt to set a proxy.");
+
+            this.openaiConfig = new Configuration({
+                apiKey: this.client.configuration.bot.keys.openai
+            });
+
+            return;
+        }
+
         const proxies: Record<string, {
             time: number;
             type: ProxyType;
@@ -139,20 +164,42 @@ export class Agent {
                 }
             }
 
+            const ppx = await fetch(`${proxy}/api/v1`, {
+                headers: {
+                    "Authorization": `Bearer ${this.client.configuration.proxy.keys[proxy]}`,
+                }
+            });
+
             // Test the proxy for an OpenAI API call
-            if ((await fetch(`${proxy}/api/v1`)).status != 404) {
-                this.client.logger.error(
-                    "Agent: Proxy",
-                    this.client.logger.color.hex("#a7e5fa")(proxy),
-                    "didn't return 404, so it's not a valid proxy."
-                );
+            if (ppx.status != 404) {
+                if (ppx.status == 401) {
+                    if (this.client.configuration.proxy.keys[proxy]) {
+                        this.client.logger.error(
+                            "Agent: Proxy",
+                            this.client.logger.color.hex("#a7e5fa")(proxy),
+                            "has an invalid API key."
+                        );
+                    } else {
+                        this.client.logger.error(
+                            "Agent: Proxy",
+                            this.client.logger.color.hex("#a7e5fa")(proxy),
+                            "is missing an API key even though it requires one."
+                        );
+                    }
+                } else {
+                    this.client.logger.error(
+                        "Agent: Proxy",
+                        this.client.logger.color.hex("#a7e5fa")(proxy),
+                        "didn't return 404, so it's not a valid proxy."
+                    );
+                }
                 continue;
             }
 
             proxies[proxy] = {
                 time: Date.now() - start,
                 type: ProxyType.Aicg, // TODO: Add proper proxy type detection
-                data
+                data,
             };
         }
         
@@ -183,5 +230,9 @@ export class Agent {
     private assignPromptValues() {
         this.prompt = this.prompt
             .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
+
+        this.dm_prompt = this.dm_prompt
+            .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
+            
     }
 }

@@ -1,5 +1,5 @@
-import { Listener } from "@sapphire/framework";
 import { HikariListener } from "../src/structures/HikariListener";
+import { Listener } from "@sapphire/framework";
 
 export class ReadyListener extends HikariListener {
     public constructor(context: Listener.Context, options: Listener.Options) {
