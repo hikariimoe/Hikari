@@ -5,6 +5,7 @@ import { Hikari } from "./src/Hikari";
 import toml from "toml";
 
 import "./src/plugins/register";
+import { existsSync, copyFileSync } from "fs";
 
 // MAIN ASYNC LOOP
 // ESM modules support top-level await,
@@ -13,6 +14,9 @@ import "./src/plugins/register";
 
 // I don't either.
 void async function main () {
+    // Pre-initialize the bot.
+    preInit();
+
     const config: HikariTomlOptions = toml.parse(
         await readFile("./config.toml", "utf-8")
     ) as HikariTomlOptions;
@@ -26,3 +30,11 @@ void async function main () {
 
     await client.login();
 } ();
+
+function preInit() {
+    // Check if the config file exists, and if not; copy the example config.
+    // This is done to prevent the user from having to manually copy the example config.
+    if (!existsSync("./config.toml")) {
+        copyFileSync("./config.example.toml", "./config.toml");
+    }
+}
