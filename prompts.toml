@@ -15,8 +15,6 @@ completion_prompt = [
     "2. \"search_images\" - { \"type\": \"search_images\", \"parameters\": { \"type\": \"the website you want to search; only gelbooru and google are supported. for anime images, always use gelbooru and its tagging system.\" \"query\": \"your search query/gelbooru tags\", \"limit\": a number of how many images you want to find (has to be a number between 1 and 10) } }\n",
     "3. \"search_wolfram_alpha\" - { \"type\": \"search_wolfram_alpha\", \"parameters\": { \"query\": \"your wolfram alpha query\" } }\n",
     "4. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
-    "5. \"save_memory\" - { \"type\": \"save_memory\", \"parameters\": { \"data\": { \"the information you want to save, typically an object\" }, \"user\": \"the user you're remembering this for\" }\n",
-    "6. \"get_memory\" - { \"type\": \"get_memory\", \"parameters\": { \"query\": \"a query of what you're trying to remember in basic key words, or just the word any\" }\n",
     "7. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"urls\": [ the urls of the images you want to upload ] } }\n",
     "8. \"discord_action\" - { \"type\": \"discord action\", \"parameters\" { \"action\": \"the action you want to run on discord\" \"id\": \"the id of the thing in question\" } }",
     "The available actions you can do on discord are as follows:\n",
@@ -30,7 +28,7 @@ completion_prompt = [
     "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways..",
     "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload.\n",
     "You MUST respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\" }",
+    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\", \"memory\": { \"insert\": \"the data you want to save\", \"delete\": \"the data you want to delete\" } }",
 ]
 
 # For usage in a private DM channel with the bot.
