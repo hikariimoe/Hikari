@@ -4,6 +4,7 @@ export enum TaskType {
     SearchImages = "search_images",
     SearchResults = "search_results",
     SearchWolframAlpha = "search_wolfram_alpha",
+    SearchMemory = "search_memory",
     InternetResults = "internet_results",
     ViewWebsite = "view_website",
     DeleteMessage = "delete_message",
@@ -14,6 +15,8 @@ export enum TaskType {
     GetMemory = "get_memory",
     MemoryData = "memory_data",
     ActionResponse = "action_response",
+    Remember = "remember",
+    DiscordAction = "discord_action"
 }
 
 export interface Task {

@@ -41,8 +41,6 @@ export class Provider<O extends ProviderOptions = ProviderOptions> extends Piece
         const url = new URL(path, this.url);
         url.search = params.search;
 
-        console.log(url.toString());
-
         const response = await fetch(url, options);
         const isJson = response.headers.get("content-type")?.includes("json");
 

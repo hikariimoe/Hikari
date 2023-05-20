@@ -18,7 +18,6 @@ export class SearchWebInstruction extends Instruction {
 
     async handle(_trigger: Message, event: Task, _context: Context): Promise<ContextEvent | undefined> {
         if (event.parameters.type == "gelbooru") {
-            console.log(event.parameters);
             const images = await this.booru.search(
                 event.parameters.query.split(" "), {
                     limit: typeof event.parameters.limit == "number"

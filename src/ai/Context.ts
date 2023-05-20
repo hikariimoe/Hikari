@@ -1,25 +1,29 @@
-import { ChatCompletionRequestMessage } from "openai";
 import { Message, TextBasedChannel, ChannelType } from "discord.js";
 import { Task, TaskType } from "../structures/ai/Task";
+import { ChatCompletionRequestMessage } from "openai";
+import { JSONUtil } from "../util/JSONUtil";
 import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
 import { Agent } from "./Agent";
-import { JSONUtil } from "../util/JSONUtil";
+import { ContextMemory } from "./ContextMemory";
 
 export interface ContextEvent {
     text?: string;
     username?: string;
     message_id?: string;
-    thoughts?: string;
+    user_id?: string;
     attempts: number;
     action?: Task;
+    memory?: {
+        in?: string;
+        out?: string;
+        user?: string;
+    }
 }
 
-export const IgnoreTaskTypes: TaskType[] = [TaskType.UploadImage];
-
-// this file is GIGANTIC lmao
-// lmao i wonder why
-// gonna check this later
+export const IgnoreTaskTypes: TaskType[] = [
+    TaskType.UploadImage
+];
 
 /**
  * An instance of a Discord channel, with context of everything that has happened in it.
@@ -30,6 +34,7 @@ export class Context {
     public channel: TextBasedChannel;
     public agent: Agent;
     public events: Set<ContextEvent>;
+    public memories: ContextMemory;
     public ratelimited: boolean = false;
     public handling: boolean = false;
     public currentMessage: Message | undefined;
@@ -38,10 +43,12 @@ export class Context {
         this.agent = agent;
         this.channel = channel;
         this.events = new Set();
+        this.memories = new ContextMemory(this);
 
         this.parse();
     }
 
+    // TODO: Also split this up into multiple functions, and check if the bot starts reciting its own prompts
     async handleCompletion(prompts: ChatCompletionRequestMessage[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
         return await new Promise(async (resolve, reject) => {
             this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
@@ -53,7 +60,7 @@ export class Context {
                     messages: prompts
                 }, {
                     responseType: "stream"
-                }))?.data.choices[0].message?.content
+                }))
                 
             } catch (e: any) {
                 if (e.response && e.response.status === 429) {
@@ -75,7 +82,11 @@ export class Context {
                     }, until);
                 } else {
                     this.agent.logger.error("Agent: Error while creating completion request:", e);
-                    console.log(e.response.data)
+
+                    if (e.response) {
+                        console.log(e.response)
+                    }
+
                     reject(undefined);
                 }
             }
@@ -157,6 +168,8 @@ export class Context {
         })
     }
 
+    // TODO: Split this into multiple functions
+    // <3
     async handle(message: Message, event?: ContextEvent, toEdit?: Message): Promise<ContextEvent | undefined> {
         event ??= await this.parseMessage(message);
         
@@ -227,7 +240,9 @@ export class Context {
 
             // We'll have to retry this one.
             event.attempts++;
-            return this.handle(message, event);
+            this.handling = false;
+            
+            return await this.handle(message, event);
         }
 
         if (completion.includes(", \"action\": undefined")) {
@@ -333,7 +348,36 @@ export class Context {
         this.agent.logger.debug("Agent: Response data:", this.agent.logger.color.hex("#ff7de3")(completion));
 
         this.events.add(event);
-        this.events.add(json as ContextEvent);
+
+        if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
+            const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
+            
+            let removed = 0;
+            for (const event of this.events.values()) {
+                if (removed == toRemove) {
+                    break;
+                }
+
+                this.events.delete(event);
+                removed++;
+            }
+        }
+
+        if (json.memory) {
+            const memory = this.memories.handle(json, message);
+
+            if (memory) {
+                this.agent.logger.trace("Agent: Memory data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(memory)));
+
+                this.events.add({
+                    attempts: 0,
+                    action: {
+                        type: TaskType.GetMemory,
+                        parameters: memory
+                    }
+                })
+            }
+        }
 
         if (json.action) {
             if (IgnoreTaskTypes.includes(json.action.type)) {
@@ -342,22 +386,10 @@ export class Context {
                 this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
                 this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
                 this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
-                let sent = false;
 
                 const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType === json.action.type);
 
                 if (instructionHandler) {
-                    if (!sent) {
-                        sent = true;
-
-                        if (json.text && json.text.length > 0 && json.text !== "") {
-                            if (toEdit) {
-                                toEdit.edit(json.text || "(empty response)");
-                            } else {
-                                message.reply(json.text || "(empty response)");
-                            }
-                        }
-                    }
 
                     this.agent.logger.trace("Agent: Proper instruction handler found.");
                     const postEvent = await instructionHandler.handle(message, json.action as Task, this);
@@ -381,26 +413,20 @@ export class Context {
                     json.action = null;
                 }
 
+                return await this.send(message, json as ContextEvent, toEdit);
             }
         }
 
-        if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
-            const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
-            
-            let removed = 0;
-            for (const event of this.events.values()) {
-                if (removed == toRemove) {
-                    break;
-                }
+        await this.send(message, json as ContextEvent, toEdit);
 
-                this.events.delete(event);
-                removed++;
-            }
-        }
+        return json as ContextEvent;
+    }
 
+    private async send(message: Message, event: ContextEvent, toEdit?: Message) {
+        this.events.add(event);
 
-        if (json.text && json.text.length > 0 && json.text !== "") {
-            let content = json.text;
+        if (event.text && event.text.length > 0 && event.text !== "") {
+            let content = event.text;
 
             // Get mentions from the message.
             // they're @Username, so we need to convert them to <@ID>
@@ -420,7 +446,7 @@ export class Context {
             if (toEdit) {
                 toEdit.edit(content);
             } else {
-                const urls = json.action?.parameters?.url ?? json.action?.parameters?.urls;
+                const urls = event.action?.parameters?.url ?? event.action?.parameters?.urls;
                 if (urls) {
                     this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "has an image(s) attached to it, so we're sending it as a file.");
                 }
@@ -429,7 +455,7 @@ export class Context {
                 try {
                     m = await message.reply({
                         content: content,
-                        files: json.action && urls ? urls.map((x: string) => {
+                        files: event.action && urls ? urls.map((x: string) => {
                             // get the file name out of the url
                             const fileName = x.split("/").pop();
 
@@ -447,14 +473,13 @@ export class Context {
                     return await this.handle(message, event);
                 }
 
-                json.message_id = m.id;
+                event.message_id = m.id;
+                event.user_id = m.author.id;
             }
         }
 
         this.currentMessage = undefined;
         this.handling = false;
-
-        return json as ContextEvent;
     }
 
     private tryParse(json?: string) {
@@ -469,6 +494,7 @@ export class Context {
         const event: ContextEvent = {
             text: message.cleanContent,
             message_id: message.id,
+            user_id: message.author.id,
             username: message.author.username,
             attempts: 0
         };

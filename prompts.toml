@@ -16,9 +16,12 @@ completion_prompt = [
     "3. \"search_wolfram_alpha\" - { \"type\": \"search_wolfram_alpha\", \"parameters\": { \"query\": \"your wolfram alpha query\" } }\n",
     "4. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
     "7. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"urls\": [ the urls of the images you want to upload ] } }\n",
-    "8. \"discord_action\" - { \"type\": \"discord action\", \"parameters\" { \"action\": \"the action you want to run on discord\" \"id\": \"the id of the thing in question\" } }",
-    "The available actions you can do on discord are as follows:\n",
-    "delete_message - deletes a message in the channel and requires the id of the message you want to delete",
+    "8. \"discord_action\" - { \"type\": \"discord action\", \"parameters\" { \"action\": \"the action you want to run on discord\" \"value\": \"the value you want to use/execute\" } }",
+    # "9. \"search_memory\" - { \"type\": \"search_memory\", \"parameters\" { \"user\": \"the user you want to search memories for\" } }",
+    # The above doesn't work due the the AI's negligence during testing in GPT-3.5-turbo. Maybe it works better in GPT-4 but we won't be testing that for now
+    "The available actions you can do on discord (via discord_action) are as follows:\n",
+    "\"delete_message\" - deletes a message, requires the id of the message you want to delete",
+    "\"change_status\" - changes the playing status you're showing on discord, and requires the status you want to change to as the value",
     "These actions are not ones you can perform, but are potentially responses to previous actions you may have asked for, or are included with someone elses messages:\n",
     "1. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }\n",
     "2. \"action_response\" - { \"type\": \"action_response\", \"parameters\": { \"action\": \"the action this is in response to\", \"response\": \"the text response to that action, you're expected to respond in coordination with it\" } }\n",
@@ -28,7 +31,8 @@ completion_prompt = [
     "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways..",
     "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload.\n",
     "You MUST respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\", \"memory\": { \"insert\": \"the data you want to save\", \"delete\": \"the data you want to delete\" } }",
+    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\" }",
+    # "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\", \"memory\": { \"in\": \"the thing you want to save to your memories\", \"out\": \"the data you want to remove from your memories\" } }",
 ]
 
 # For usage in a private DM channel with the bot.
