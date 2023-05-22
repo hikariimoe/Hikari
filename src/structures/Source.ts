@@ -1,4 +1,5 @@
 import { container, Piece } from "@sapphire/framework";
+import { Message } from "discord.js";
 import { SourceType } from "../util/Constants";
 import { Logger } from "../util/Logger";
 import { HikariContainer } from "./HikariContainer";
@@ -32,7 +33,7 @@ export abstract class Source<O extends SourceOptions = SourceOptions> extends Pi
         })
     }
 
-    abstract prompt(prompts: Prompt[], model?: string): Promise<string | Promise<string>>;
+    abstract prompt(prompts: Prompt[], message: Message, model?: string): Promise<string | Promise<string>>;
 }
 
 // this looks hyperactively ugly holy shit

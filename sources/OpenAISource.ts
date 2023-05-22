@@ -3,6 +3,7 @@ import { SourceType } from "../src/util/Constants";
 import { Agent } from "../src/ai/Agent";
 import { SourceError, SourceErrorType, SourceErrorData } from "../src/util/errors/SourceError";
 import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
+import { Message } from "discord.js";
 
 export class OpenAISource extends Source {
     constructor(context: Source.Context) {
@@ -13,7 +14,7 @@ export class OpenAISource extends Source {
         });
     }
 
-    async prompt(prompts: Prompt[], model?: string): Promise<string | Promise<string>> {
+    async prompt(prompts: Prompt[], message: Message, model?: string): Promise<string | Promise<string>> {
         // TODO: we should NOT be handling the OpenAI source here.
         //       The OpenAI source should be handled in this class instead.
         const { client: { agent, configuration } } = this.container;
@@ -49,21 +50,10 @@ export class OpenAISource extends Source {
             }
 
             let result = "";
-            let resolve2: any;
-            let reject2: any;
             let queued = false;
+            let queueMessage: Message | undefined;
 
             completionStream?.data.on("data", async (data: Buffer) => {
-                const queue = {
-                    resolve: (value: string) => {
-                        queued == true ? resolve2(value) : resolve(value);
-                    },
-
-                    reject: (error: SourceError | undefined) => {
-                        queued == true ? reject2(error) : reject(error);
-                    }
-                }
-
                 let values = data.toString().split("\n")
                     .filter((line) => line.trim() !== "");
 
@@ -75,18 +65,17 @@ export class OpenAISource extends Source {
                     if (value.includes("queue")) {
                         if (queued == false) {
                             queued = true;
-
-                            resolve(new Promise((res, rej) => {
-                                resolve2 = res;
-                                reject2 = rej;
-                            }));
+                            queueMessage = await message.channel.send("<enqueued prompt, please wait for a response...>");
                         }
+
                         continue;
                     }
 
                     if (value === "[DONE]") {
                         // check if we've sent the queue message, and delete it if it exists
                         if (result.includes("upstream error")) {
+                            await queueMessage?.delete();
+                            
                             if (result.includes("server_error")) {
                                 this.logger.error("The OpenAI API is currently experiencing major issues, so we can't continue.")
                                 this.logger.error("Please try again later, or contact the developer if this issue persists.");
@@ -96,13 +85,14 @@ export class OpenAISource extends Source {
                                 }));
                             }
 
-                            return queue.reject(undefined);
+                            return reject(undefined);
                         }
 
                         this.logger.trace("Request has been completed, returning result.");
 
+                        await queueMessage?.delete();
                         completionStream?.data.destroy();
-                        return queue.resolve(result);
+                        return resolve(result);
                     }
 
                     let json: any;
@@ -111,7 +101,9 @@ export class OpenAISource extends Source {
                         json = JSON.parse(value);
                     } catch (e: any) {
                         completionStream?.data.destroy();
-                        return queue.reject(new SourceError(SourceErrorType.MalformedResponse, {
+                        await queueMessage?.delete();
+
+                        return reject(new SourceError(SourceErrorType.MalformedResponse, {
                             data: e.message
                         }));
                     }

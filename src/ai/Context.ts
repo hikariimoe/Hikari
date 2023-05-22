@@ -54,7 +54,9 @@ export class Context {
     async handleCompletion(prompts: Prompt[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
         return await new Promise(async(resolve, reject) => {
             try {
-                const res = await this.agent.source.prompt(prompts, model);
+                const res = await this.agent.source.prompt(prompts, this.currentMessage!, model);
+
+                console.log(res);
 
                 if (typeof res === "string") {
                     return resolve(res);
@@ -350,6 +352,14 @@ export class Context {
         }
 
         // Quick fixes because the AI can be really fucking stupid
+        if (typeof json === "string") {
+            // Likely just text
+            json = {
+                text: json,
+                username: this.agent.name
+            }
+        }
+
         if (json.action && typeof json.action === "string") {
             if (json.action == "null") {
                 json.action = null;
