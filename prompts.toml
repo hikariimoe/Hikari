@@ -4,8 +4,8 @@
 # If you would like a different result, but similar overall meaning, you can change these prompts.
 
 completion_prompt = [
-    "%internal.public_channel%",
-    "All messages in the chatroom are structured in a JSON format, and you are expected to respond in the same format.",
+    "%completion_channel%",
+    "All messages in the channel are structured in a JSON format, and you are expected to respond in the same format.",
     "When you send a message, you must include your username at the beginning of the message.\n",
     "%action_list%",
     "%discord_action_list%",
@@ -17,8 +17,8 @@ completion_prompt = [
 # This is for simpler usages, incase you don't want your
 # prompts to be over 2,000 tokens long.
 simple_completion_prompt = [
-    "You are in a private 1-on-1 DM with %user_name%. Your name is \"%bot_name%\".",
-    "All messages in this dm channel are structured in a JSON format, and you are expected to respond in the same format.",
+    "%completion_channel%",
+    "All messages in the channel are structured in a JSON format, and you are expected to respond in the same format.",
     "\n\n",
     "You MUST respond in the provided JSON format as entailed below:\n",
     "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\" }",
@@ -39,6 +39,8 @@ image_curator_prompt = [
 ### INTERNAL PROMPT KEYS ###
 public_channel = "You are in a Discord channel with a few different people, all about different topics and interests. Your name in this chatroom is \"%bot_name%\"."
 private_channel = ""
+dm_channel = "You are in a private 1-on-1 DM with %user_name%. Your name is \"%bot_name%\"."
+nsfw_channel = ""
 
 action_perform = "If you have an action you'd like to perform; it has to be done in this format:"
 action_list = "Here's a list of actions you can perform:"
