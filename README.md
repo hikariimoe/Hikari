@@ -7,10 +7,10 @@
 		<a href="https://github.com/sponsors/irisu01"><img src="https://img.shields.io/badge/support-support%20us!-important" /></a>
   </p>
 	<p>
-    <a href="https:/github.com/irisu01/Hikari/blob/master/LICENSE.md"><img src="https://img.shields.io/github/license/irisu01/Hikari" /></a>
-		<a href="https://github.com/irisu01/Hikari/issues"><img src="https://img.shields.io/github/issues/irisu01/Hikari" /></a>
-		<a href="https://github.com/irisu01/Hikari/actions"><img src="https://img.shields.io/github/actions/workflow/status/irisu01/Hikari/tsc.yml" /></a>
-		<img src="https://img.shields.io/tokei/lines/github/irisu01/Hikari" />
+    <a href="https:/github.com/hikariimoe/Hikari/blob/master/LICENSE.md"><img src="https://img.shields.io/github/license/hikariimoe/Hikari" /></a>
+		<a href="https://github.com/hikariimoe/Hikari/issues"><img src="https://img.shields.io/github/issues/hikariimoe/Hikari" /></a>
+		<a href="https://github.com/hikariimoe/Hikari/actions"><img src="https://img.shields.io/github/actions/workflow/status/hikariimoe/Hikari/tsc.yml" /></a>
+		<img src="https://img.shields.io/tokei/lines/github/hikariimoe/Hikari" />
 		<a href="https://github.com/sponsors/irisu01"><img src="https://img.shields.io/github/sponsors/irisu01" /></a>
 	</p>
 	<p>
@@ -45,7 +45,7 @@ If you would like to contribute to the project, **please** inform a developer vi
 
 ### Support
 
-All development should be resolved and curated over our [issue tracker](https://github.com/irisu01/Hikari/issues), but all bot support questions should be made over our [discord](https://discord.gg/ZbXUfT82ed).
+All development should be resolved and curated over our [issue tracker](https://github.com/hikariimoe/Hikari/issues), but all bot support questions should be made over our [discord](https://discord.gg/ZbXUfT82ed).
 
 ## License
 **Hikari** is licensed under the AGPL-3.0 license. Please see the license file for more information. Simply put, you are free to use this software for any purpose, but you must disclose any changes you make to the source code and release them under the same license. This however does not include branding or other assets that are not part of the source code; such as Hikari's icons, logos, etc. All rights to the artistic assets used are reserved by the creators of such assets, and not me.
