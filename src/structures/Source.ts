@@ -1,4 +1,4 @@
-import { container, Piece } from "@sapphire/framework";
+import { Piece, container } from "@sapphire/framework";
 import { Message } from "discord.js";
 import { SourceType } from "../util/Constants";
 import { Logger } from "../util/Logger";
@@ -30,7 +30,7 @@ export abstract class Source<O extends SourceOptions = SourceOptions> extends Pi
 
         this.logger = new Logger(this.container.client, {
             title: options.title
-        })
+        });
     }
 
     abstract prompt(prompts: Prompt[], message: Message, model?: string): Promise<string | Promise<string>>;

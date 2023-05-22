@@ -16,8 +16,8 @@ export class ContextMemory {
     }
 
     public get(key: string): any {
-        let memory = this.userMemories.get(key);
-        this.context.agent.logger.trace(`ContextMemory: Getting memory for \"${key}\"`, ": ", memory);
+        const memory = this.userMemories.get(key);
+        this.context.agent.logger.trace(`ContextMemory: Getting memory for "${key}"`, ": ", memory);
 
         return memory;
     }
@@ -26,8 +26,9 @@ export class ContextMemory {
         if (!this.userMemories.has(key))
             this.userMemories.set(key, []);
 
+        // eslint-disable @typescript-eslint/no-non-null-assertion
         this.userMemories.get(key)!.push(value);
-        this.context.agent.logger.debug(`ContextMemory: Setting memory for \"${key}\"`, ": ", value);
+        this.context.agent.logger.debug(`ContextMemory: Setting memory for "${key}"`, ": ", value);
     }
 
     public remove(key: string, value?: string): void {
@@ -39,13 +40,14 @@ export class ContextMemory {
 
             if (!memories)
                 return;
-            
+
             memories.splice(memories.indexOf(value), 1);
-            this.context.agent.logger.debug(`ContextMemory: Removing memory for \"${key}\"`, ": ", value);
+            this.context.agent.logger.debug(`ContextMemory: Removing memory for "${key}"`, ": ", value);
         }
     }
 
-    public handle(event: ContextEvent, message: Message): string[] | void {
+    // eslint-disable @typescript-eslint/no-invalid-void-type
+    public handle(event: ContextEvent, message: Message): string[] | undefined {
         if (!event.memory)
             return;
 

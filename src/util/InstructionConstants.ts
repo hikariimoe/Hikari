@@ -11,7 +11,7 @@ export const InstructionData = {
             value: "the value you want to use/execute"
         }
     }
-}
+};
 
 /*
     "1. \"search_internet\" - { \"type\": \"search_internet\", \"parameters\": { \"query\": \"your search query\" } }\n",
@@ -26,7 +26,7 @@ export const InstructionData = {
 
 export const DiscordInstructionData = {
     "delete_message": "deletes a message, requires the id of the message you want to delete",
-}
+};
 
 /*
     "\"delete_message\" - deletes a message, requires the id of the message you want to delete",
@@ -39,7 +39,7 @@ export const InstructionResponseData = {
             query: "a text describing the image(s) that were just uploaded"
         }
     }
-}
+};
 
 /*
 "1. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }\n",

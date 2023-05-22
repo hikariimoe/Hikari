@@ -6,7 +6,7 @@ export class WolframAlphaProvider extends Provider {
         super(context, {
             // TODO: figure out why "/api/v1/" doesn't work here
             url: "https://www.wolframalpha.com"
-        })
+        });
     }
 
     async query(query: string): Promise<any> {

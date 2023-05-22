@@ -26,6 +26,6 @@ export class SearchWebInstruction extends Instruction {
                 type: TaskType.InternetResults,
                 parameters: Util.shrink(results)
             }
-        }
+        };
     }
 }

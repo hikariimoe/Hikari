@@ -15,6 +15,7 @@
         "listeners/**/*.ts",
         "instructions/**/*.ts",
         "providers/**/*.ts",
+        "sources/**/*.ts",
         "commands/**/*.ts"
     ],
     "exclude": [

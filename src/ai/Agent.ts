@@ -1,5 +1,5 @@
 import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
-import { Channel, Message, TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
+import { Channel, TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
 import { Source } from "../structures/Source";
 import { Configuration } from "openai";
 import { Context } from "./Context";
@@ -58,21 +58,22 @@ export class Agent {
 
         this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
         this.prompt = this.getBasePrompt("prompt");
-        
-        if (this.client.configuration.bot.information.dm_prompt.length == 0) {
+
+        if (this.client.configuration.bot.information.dm_prompt.length === 0) {
             this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
-            
+
             this.dm_prompt = this.getBasePrompt("prompt");
         } else {
-            this.dm_prompt = this.getBasePrompt("dm_prompt")
+            this.dm_prompt = this.getBasePrompt("dm_prompt");
         }
-        
+
         if (!this.client.stores.get("sources").has(this.client.configuration.bot.ai.source)) {
             this.logger.fatal("Agent: The source provided in the configuration file does not exist.");
             this.logger.fatal("Agent: Please check your configuration file and try again.");
             return process.exit(1);
         }
-        
+
+        // eslint-disable @typescript-eslint/no-non-null-assertion
         this.source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source)!;
         this.openaiConfig = new Configuration();
     }
@@ -96,7 +97,7 @@ export class Agent {
         let completionPrompt: string = "";
 
         if (minimal) {
-            switch (minimal_mode) {}
+            // switch (minimal_mode) {}
         } else {
             completionPrompt = this.getPrompt("completion_prompt");
         }
@@ -138,7 +139,7 @@ export class Agent {
      * Attempts to set the proxy that's best suited for the client.
      */
     public async attemptSetProxy() {
-        if (this.client.configuration.proxy.use_proxy == false) {
+        if (!this.client.configuration.proxy.use_proxy) {
             this.logger.info("Agent: Proxy usage is disabled, so the agent will not attempt to set a proxy.");
 
             this.openaiConfig = new Configuration({
@@ -166,7 +167,7 @@ export class Agent {
             const start = Date.now();
             const homepage = await fetch(proxy);
 
-            if (homepage.status != 200) {
+            if (homepage.status !== 200) {
                 this.client.logger.error(
                     "Agent: Proxy",
                     this.client.logger.color.hex("#a7e5fa")(proxy),
@@ -179,7 +180,7 @@ export class Agent {
             const $ = load(await homepage.text());
             const data = JSON.parse($("body > pre").text());
 
-            if (data.config.promptLogging == "true") {
+            if (data.config.promptLogging === "true") {
                 this.client.logger.warn(
                     "Agent: Proxy",
                     this.client.logger.color.hex("#a7e5fa")(proxy),
@@ -199,7 +200,7 @@ export class Agent {
             });
 
             // Test the proxy for an OpenAI API call
-            if (ppx.status == 401) {
+            if (ppx.status === 401) {
                 if (this.client.configuration.proxy.keys[proxy]) {
                     this.client.logger.error(
                         "Agent: Proxy",
@@ -213,7 +214,7 @@ export class Agent {
                         "is missing an API key even though it requires one."
                     );
                 }
-            } else if (ppx.status != 404) {
+            } else if (ppx.status !== 404) {
                 this.client.logger.error(
                     "Agent: Proxy",
                     this.client.logger.color.hex("#a7e5fa")(proxy),
@@ -233,7 +234,7 @@ export class Agent {
         this.logger.debug("Agent: Proxy List Size:", proxyCount);
         this.logger.trace("Agent: Determining which one works the best for our usecases");
 
-        if (proxyCount == 0) {
+        if (proxyCount === 0) {
             this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");
             process.exit(1);
         }
@@ -258,7 +259,7 @@ export class Agent {
         prompt = this.handleActionList(prompt);
 
         for (const match of prompt.matchAll(/%([\w.]*)%/g)) {
-            if (match[1] == "bot_name") {
+            if (match[1] === "bot_name") {
                 prompt = prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
             } else if (match[1].startsWith("internal")) {
                 prompt = prompt.replace(
@@ -268,7 +269,7 @@ export class Agent {
             }
         }
 
-       return prompt;
+        return prompt;
     }
 
     public handleActionList(prompt: string): string {
@@ -285,13 +286,13 @@ export class Agent {
 
         const responses = Object.entries(InstructionResponseData)
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
-        
+
         const discordActions = allowedActions.includes("discord_action")
             ? Object.entries(DiscordInstructionData)
                 .filter(([key]) => allowedDiscordActions.includes(key))
                 .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`)
             : [];
-        
+
         const imageInstructions = [
             "search_images"
         ];
@@ -300,36 +301,36 @@ export class Agent {
             .replace(
                 /%action_list%/g,
                 instructions.length > 0
-                ? [
-                    "\n\n%internal.action_perform%",
-                    JSON.stringify({
-                        type: "action_name",
-                        parameters: {
-                            parameter_name: "parameter_value"
-                        }
-                    }),
-                    "\n",
-                    "%internal.action_list%",
-                    ...instructions,
-                ].join("\n") : "\n"
+                    ? [
+                        "\n\n%internal.action_perform%",
+                        JSON.stringify({
+                            type: "action_name",
+                            parameters: {
+                                parameter_name: "parameter_value"
+                            }
+                        }),
+                        "\n",
+                        "%internal.action_list%",
+                        ...instructions,
+                    ].join("\n") : "\n"
             )
             .replace(
                 /%discord_action_list%/g,
                 discordActions.length > 0
-                ? [
-                    "\n\n\n%internal.discord_action_list%",
-                    ...discordActions,
-                ].join("\n") : "\n"
+                    ? [
+                        "\n\n\n%internal.discord_action_list%",
+                        ...discordActions,
+                    ].join("\n") : "\n"
             )
             .replace(
                 /%action_response_list%/g,
                 instructions.length > 0 && responses.length > 0
-                ? [
-                    "\n\n\n%internal.action_response_list%",
-                    ...responses,
-                    "%internal.math_warning%",
-                    "%internal.upload_image_warning%"
-                ].join("\n") : "\n"
+                    ? [
+                        "\n\n\n%internal.action_response_list%",
+                        ...responses,
+                        "%internal.math_warning%",
+                        "%internal.upload_image_warning%"
+                    ].join("\n") : "\n"
             )
             .replace(
                 /%json_format%/g,
@@ -347,6 +348,7 @@ export class Agent {
                 /%internal.upload_image_warning%/g,
                 instructions.filter(
                     (x) => imageInstructions.includes(
+                        // eslint-disable @typescript-eslint/no-non-null-assertion
                         x.match(/"(.+?)"/)![1]
                     )
                 ).length > 0 ? "$&" : ""

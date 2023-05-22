@@ -1,4 +1,4 @@
-import { container, Piece, PieceContext } from "@sapphire/framework";
+import { Piece, PieceContext, container } from "@sapphire/framework";
 import { ProviderError } from "../util/errors/ProviderError";
 import { HikariContainer } from "./HikariContainer";
 import { JSONUtil } from "../util/JSONUtil";

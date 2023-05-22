@@ -33,7 +33,7 @@ export class Hikari extends SapphireClient {
         this.stores.register(
             new InstructionStore()
                 .registerPath(pjoin(this.rootData.root, "instructions"))
-        )
+        );
         this.stores.register(
             new SourceStore()
                 .registerPath(pjoin(this.rootData.root, "sources"))
@@ -44,6 +44,7 @@ export class Hikari extends SapphireClient {
     }
 
     get agent() {
+        // eslint-disable @typescript-eslint/no-non-null-assertion
         return this._agent!;
     }
 

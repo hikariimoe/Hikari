@@ -1,6 +1,5 @@
-import { Message, TextBasedChannel, ChannelType } from "discord.js";
+import { Message, TextBasedChannel } from "discord.js";
 import { Task, TaskType } from "../structures/ai/Task";
-import { ChatCompletionRequestMessage } from "openai";
 import { JSONUtil } from "../util/JSONUtil";
 import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
@@ -54,8 +53,10 @@ export class Context {
 
     // TODO: Also split this up into multiple functions, and check if the bot starts reciting its own prompts
     async handleCompletion(prompts: Prompt[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
-        return await new Promise(async(resolve, reject) => {
+        // eslint-disable no-async-promise-executor
+        return await new Promise(async (resolve, reject) => {
             try {
+                // eslint-disable @typescript-eslint/no-non-null-assertion
                 const res = await this.agent.source.prompt(prompts, this.currentMessage!, model);
 
                 if (typeof res === "string") {
@@ -67,9 +68,9 @@ export class Context {
                 }
             } catch (e: any) { // you actually used to be able to type errors this way
                 if (e instanceof SourceError) {
-                    if (e.type == SourceErrorType.Ratelimited) {
+                    if (e.type === SourceErrorType.Ratelimited) {
                         this.ratelimited = true;
-                        
+
                         setTimeout(async () => {
                             this.ratelimited = false;
                             resolve(await this.handleCompletion(prompts, sendReply, model));
@@ -78,11 +79,11 @@ export class Context {
                         return reject(e);
                     }
                 }
-                
+
                 resolve("");
             }
-        })
-        
+        });
+
         // return await new Promise(async (resolve, reject) => {
         //     this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
         //     let completionStream: any;
@@ -94,7 +95,7 @@ export class Context {
         //         }, {
         //             responseType: "stream"
         //         }))
-                
+
         //     } catch (e: any) {
         //         if (e.response && e.response.status === 429) {
         //             this.ratelimited = true;
@@ -205,7 +206,7 @@ export class Context {
     // <3
     async handle(message: Message, event?: ContextEvent, toEdit?: Message): Promise<ContextEvent | undefined> {
         event ??= await this.parseMessage(message);
-        
+
         if (this.ratelimited || this.handling) {
             this.events.add(event);
             return;
@@ -236,10 +237,10 @@ export class Context {
             prompts.push({
                 role: (
                     !event.username
-                    ? "system"
-                    : event.username == this.agent.name
-                    ? "assistant"
-                    : "user"
+                        ? "system"
+                        : event.username === this.agent.name
+                            ? "assistant"
+                            : "user"
                 ),
                 content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
             });
@@ -248,10 +249,10 @@ export class Context {
         prompts.push({
             role: (
                 !event.username
-                ? "system"
-                : event.username == this.agent.name
-                ? "assistant"
-                : "user"
+                    ? "system"
+                    : event.username === this.agent.name
+                        ? "assistant"
+                        : "user"
             ),
             content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
         });
@@ -269,7 +270,7 @@ export class Context {
             }
 
             if (e instanceof SourceError) {
-                if (e.type == SourceErrorType.InternalError) {
+                if (e.type === SourceErrorType.InternalError) {
                     return undefined;
                 }
             }
@@ -280,7 +281,7 @@ export class Context {
             // We'll have to retry this one.
             event.attempts++;
             this.handling = false;
-            
+
             return await this.handle(message, event);
         }
 
@@ -321,7 +322,7 @@ export class Context {
                 }
 
                 if (json.includes("\n")) {
-                    json = json.split("\n")
+                    json = json.split("\n");
                 }
 
                 if (Array.isArray(json)) {
@@ -332,7 +333,7 @@ export class Context {
                         if (val.username) {
                             objBuilder = {
                                 ...val
-                            }
+                            };
                         } else if (val.type) {
                             objBuilder.action = val;
                         }
@@ -357,25 +358,25 @@ export class Context {
             json = {
                 text: json,
                 username: this.agent.name
-            }
+            };
         }
 
         if (json.action && typeof json.action === "string") {
-            if (json.action == "null") {
+            if (json.action === "null") {
                 json.action = null;
             } else {
-                let stringified = JSONUtil.tryParse(json.action);
+                const stringified = JSONUtil.tryParse(json.action);
 
                 if (stringified) {
                     // this is rare but wow
-                    json = stringified
+                    json = stringified;
                 }
 
                 if (json.parameters) {
                     json.action = {
                         type: json.action,
                         parameters: json.parameters
-                    }
+                    };
 
                     delete json.parameters;
                 }
@@ -383,7 +384,7 @@ export class Context {
         }
 
         const urls = json.action?.parameters?.url ?? json.action?.parameters?.urls;
-        if (json.action?.type == "upload_image" && !urls) {
+        if (json.action?.type === "upload_image" && !urls) {
             this.agent.logger.warn("Agent: The AI tried to upload an image(s), but it didn't provide any urls.");
             this.agent.logger.debug("Agent: Action data:", this.agent.logger.color.hex("#ff7de3")(json.action));
 
@@ -398,10 +399,10 @@ export class Context {
 
         if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
             const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
-            
+
             let removed = 0;
             for (const event of this.events.values()) {
-                if (removed == toRemove) {
+                if (removed === toRemove) {
                     break;
                 }
 
@@ -422,7 +423,7 @@ export class Context {
                         type: TaskType.GetMemory,
                         parameters: memory
                     }
-                })
+                });
             }
         }
 
@@ -486,7 +487,7 @@ export class Context {
                 if (user) {
                     content = content.replace(new RegExp(`@${user.username}`), `<@${user.id}>`);
                 }
-                
+
                 matches = regex.exec(content);
             }
 
@@ -509,7 +510,7 @@ export class Context {
                             return {
                                 attachment: x,
                                 name: fileName
-                            }
+                            };
                         }) : undefined
                     });
                 } catch (e) {
@@ -574,8 +575,8 @@ export class Context {
                 const similarity = parseFloat(first.header.similarity);
                 let finalString = "";
 
-                if (similarity >= 90 && first.data != null) {
-                    let tags = await this.getTags(attachment.url, attachment.name);
+                if (similarity >= 90 && first.data !== null) {
+                    const tags = await this.getTags(attachment.url, attachment.name);
                     finalString = await this.handleCompletion([{
                         role: "system",
                         content: this.agent.getPrompt("image_curator_prompt")
@@ -602,14 +603,14 @@ export class Context {
                     parameters: {
                         query: finalString
                     }
-                }
+                };
             } else {
                 event.action = {
                     type: TaskType.UploadImage,
                     parameters: {
                         query: "You are unsure what this image is, as you can't find any characters or source material, or tell what it is."
                     }
-                }
+                };
             }
         }
 

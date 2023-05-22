@@ -59,7 +59,7 @@ export class Logger extends BuiltinLogger {
         const newValues = [...values]; // Fuck you, readonly!
 
         if (this.options.title) {
-            format = format.replace("{title}", this.options.title)
+            format = format.replace("{title}", this.options.title);
         } else if (typeof values[0] === "string" && values[0].match(/[a-zA-Z0-9]: /)) {
             const mainValue = values[0].split(": ");
             newValues[0] = mainValue[1];

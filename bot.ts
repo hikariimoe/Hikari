@@ -5,7 +5,7 @@ import { Hikari } from "./src/Hikari";
 import toml from "toml";
 
 import "./src/plugins/register";
-import { existsSync, copyFileSync } from "fs";
+import { copyFileSync, existsSync } from "fs";
 
 // MAIN ASYNC LOOP
 // ESM modules support top-level await,

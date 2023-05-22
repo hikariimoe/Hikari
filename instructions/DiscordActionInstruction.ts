@@ -2,8 +2,7 @@ import { Instruction, InstructionOptions } from "../src/structures/Instruction";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Context, ContextEvent } from "../src/ai/Context";
 import { Piece } from "@sapphire/pieces";
-import { Message, PermissionFlagsBits } from "discord.js";
-import { TextChannel } from "discord.js";
+import { Message } from "discord.js";
 
 enum DiscordAction {
     DeleteMessage = "delete_message",
@@ -37,9 +36,7 @@ export class SaveMemoryInstruction extends Instruction {
     }
 
     private async deleteMessage(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
-        const currentEvent = this.getLastValue(context.events);
         let response = "";
-        let deleted = true;
 
         try {
             console.log(this.ensureString(event.parameters.value));
@@ -56,11 +53,9 @@ export class SaveMemoryInstruction extends Instruction {
                 }
             }
 
-            response = `The message was successfully deleted.`;
-            deleted = true;
+            response = "The message was successfully deleted.";
         } catch (e) {
-            response = `The message could not be deleted.`;
-            deleted = false;
+            response = "The message could not be deleted.";
         }
 
         return {
@@ -79,7 +74,7 @@ export class SaveMemoryInstruction extends Instruction {
     // TODO: move this to a utility class
     private ensureString(str: string): string {
         try {
-            let output = JSON.parse(str);
+            const output = JSON.parse(str);
 
             return typeof output === "string" ? output : str;
         } catch (e) {

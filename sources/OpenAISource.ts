@@ -1,8 +1,8 @@
-import { Source, Prompt } from "../src/structures/Source";
+import { Prompt, Source } from "../src/structures/Source";
 import { SourceType } from "../src/util/Constants";
 import { Agent } from "../src/ai/Agent";
-import { SourceError, SourceErrorType, SourceErrorData } from "../src/util/errors/SourceError";
-import { Configuration, OpenAIApi, ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
+import { SourceError, SourceErrorData, SourceErrorType } from "../src/util/errors/SourceError";
+import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, Configuration, OpenAIApi } from "openai";
 import { Message } from "discord.js";
 
 export class OpenAISource extends Source {
@@ -39,12 +39,12 @@ export class OpenAISource extends Source {
             let completionStream: any;
 
             try {
-                let cleanPrompts = prompts.map((p) => {
+                const cleanPrompts = prompts.map((p) => {
                     return {
                         content: p.content,
                         role: p.role as ChatCompletionRequestMessageRoleEnum
-                    } satisfies ChatCompletionRequestMessage
-                })
+                    };
+                });
 
                 completionStream = (await this.ai.createChatCompletion({
                     model: model ?? "gpt-3.5-turbo",
@@ -67,7 +67,7 @@ export class OpenAISource extends Source {
             let queueMessage: Message | undefined;
 
             completionStream?.data.on("data", async (data: Buffer) => {
-                let values = data.toString().split("\n")
+                const values = data.toString().split("\n")
                     .filter((line) => line.trim() !== "");
 
                 for (let value of values) {
@@ -76,7 +76,7 @@ export class OpenAISource extends Source {
                     }
 
                     if (value.includes("queue")) {
-                        if (queued == false) {
+                        if (!queued) {
                             queued = true;
                             queueMessage = await message.channel.send("<enqueued prompt, please wait for a response...>");
                         }
@@ -90,7 +90,7 @@ export class OpenAISource extends Source {
                             await queueMessage?.delete();
                             
                             if (result.includes("server_error")) {
-                                this.logger.error("The OpenAI API is currently experiencing major issues, so we can't continue.")
+                                this.logger.error("The OpenAI API is currently experiencing major issues, so we can't continue.");
                                 this.logger.error("Please try again later, or contact the developer if this issue persists.");
 
                                 return reject(new SourceError(SourceErrorType.InternalError, {
@@ -128,10 +128,10 @@ export class OpenAISource extends Source {
                             if (choice.delta.content) {
                                 result += choice.delta.content;
                             }
-                        })
+                        });
                     }
                 }
-            })
+            });
         });
     }
 

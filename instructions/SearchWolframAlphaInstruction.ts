@@ -30,7 +30,7 @@ export class SearchWolframAlphaInstruction extends Instruction {
                         result
                     }
                 }
-            }
+            };
         } catch (_) {
             return {
                 attempts: 0,
@@ -41,7 +41,7 @@ export class SearchWolframAlphaInstruction extends Instruction {
                         response: null
                     }
                 }
-            }
+            };
         }
     }
 }

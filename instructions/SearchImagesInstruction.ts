@@ -20,7 +20,7 @@ export class SearchWebInstruction extends Instruction {
         if (event.parameters.type == "gelbooru") {
             const images = await this.booru.search(
                 event.parameters.query.split(" "), {
-                    limit: typeof event.parameters.limit == "number"
+                    limit: typeof event.parameters.limit === "number"
                         ? event.parameters.limit
                         : 5,
                     random: true
@@ -44,7 +44,7 @@ export class SearchWebInstruction extends Instruction {
                         }
                     }
                 }
-            }
+            };
         }
     }
 }

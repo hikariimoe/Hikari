@@ -2,11 +2,8 @@
 
 import { Message } from "discord.js";
 import { HikariListener } from "../src/structures/HikariListener";
-import { isDMChannel } from "@sapphire/discord.js-utilities";
 import { Listener } from "@sapphire/framework";
 import { Events } from "../src/util/Events";
-
-import type { Hikari } from "../src/Hikari";
 
 export class MessageCreateListener extends HikariListener<typeof Events.MessageCreate> {
     private config = this.container.client.configuration.bot;
@@ -25,7 +22,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         const prefixes = await this.container.client.fetchPrefix(message);
         const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
         
-        if (prefix && prefix.length != message.content.length) {
+        if (prefix && prefix.length !== message.content.length) {
             if (message.channel.isDMBased()) {
                 return;
             }
@@ -37,7 +34,7 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
                 || !message.channel.isDMBased() && !this.config.blacklist.blacklist_only_dms && this.config.blacklist.users.includes(message.author.id)) {
                 return;
             }
-            if ((this.config.whitelist.enabled == true && !this.config.whitelist.users.includes(message.author.id))
+            if ((this.config.whitelist.enabled && !this.config.whitelist.users.includes(message.author.id))
                 || this.config.blacklist.channels.includes(message.channel.id)) {
                 return;
             }
@@ -85,8 +82,8 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         // (its shorter now but still ugly LMAO)
         const mention = message.content.match(/^<@[!&]?(\d+)>/);
         return this.container.client.disableMentionPrefix && mention && (
-            mention[1] == this.container.client.id
-            || mention[1] == message.guild?.roles.botRoleFor(this.container.client.id!)?.id
+            mention[1] === this.container.client.id
+            || mention[1] === message.guild?.roles.botRoleFor(this.container.client.id!)?.id
         ) ? mention[0] : null;
     }
 
@@ -98,13 +95,13 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         if (this.container.client.options.caseInsensitivePrefixes) {
             const content = message.content.toLowerCase();
             return (
-                typeof prefixes == "string"
+                typeof prefixes === "string"
                 ? content.startsWith(prefixes.toLowerCase()) && prefixes.toLowerCase()
                 : prefixes.find((x) => content.startsWith(x.toLowerCase()))
             ) || null;
         } else {
             return (
-                typeof prefixes == "string"
+                typeof prefixes === "string"
                 ? message.content.startsWith(prefixes) && prefixes
                 : prefixes.find((x) => message.content.startsWith(x))
             ) || null;

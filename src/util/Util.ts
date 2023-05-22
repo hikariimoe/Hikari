@@ -21,20 +21,20 @@ export class Util {
         const object = destruct ? Util.destructure(obj) : obj;
         
         if (Array.isArray(object)) {
-            if (object.length == 0) {
+            if (object.length === 0) {
                 return null;
             }
             
             return object.filter(
-                (x) => typeof x != "undefined" && x != null
-            ).map((x) => typeof x == "object" ? this.shrink(x) : x) as T;
+                (x) => typeof x !== "undefined" && x !== null
+            ).map((x) => typeof x === "object" ? this.shrink(x) : x) as T;
         } else {
             const clone = {} as Record<any, any>;
             for (const [key, value] of Object.entries(object)) {
-                if (typeof value == "undefined" || value == null)
+                if (typeof value === "undefined" || value === null)
                     continue;
     
-                clone[key] = typeof value == "object" ? this.shrink(value) : value;
+                clone[key] = typeof value === "object" ? this.shrink(value) : value;
             }
     
             return clone;
