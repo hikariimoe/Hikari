@@ -4,65 +4,14 @@
 # If you would like a different result, but similar overall meaning, you can change these prompts.
 
 completion_prompt = [
-    "You are in a private Discord channel with a few different people, all about different topics and interests. Your name in this chatroom is \"%bot_name%\".",
+    "%internal.public_channel%",
     "All messages in the chatroom are structured in a JSON format, and you are expected to respond in the same format.",
-    "When you send a message, you must include your username at the beginning of the message.",
-    "\n\n",
-    "If you have an action you'd like to perform; it has to be done in this format:\n",
-    "{ \"type\": \"action_name\", \"parameters\": { \"parameter_name\": \"parameter_value\" } }\n",
-    "These are the only actions you can perform, or will see in the chatroom:\n\n",
-    "1. \"search_internet\" - { \"type\": \"search_internet\", \"parameters\": { \"query\": \"your search query\" } }\n",
-    "2. \"search_images\" - { \"type\": \"search_images\", \"parameters\": { \"type\": \"the website you want to search; only gelbooru and google are supported. for anime images, always use gelbooru and its tagging system.\" \"query\": \"your search query/gelbooru tags\", \"limit\": a number of how many images you want to find (has to be a number between 1 and 10) } }\n",
-    "3. \"search_wolfram_alpha\" - { \"type\": \"search_wolfram_alpha\", \"parameters\": { \"query\": \"your wolfram alpha query\" } }\n",
-    "4. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
-    "7. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"urls\": [ the urls of the images you want to upload ] } }\n",
-    "8. \"discord_action\" - { \"type\": \"discord action\", \"parameters\" { \"action\": \"the action you want to run on discord\" \"value\": \"the value you want to use/execute\" } }",
-    # "9. \"search_memory\" - { \"type\": \"search_memory\", \"parameters\" { \"user\": \"the user you want to search memories for\" } }",
-    # The above doesn't work due the the AI's negligence during testing in GPT-3.5-turbo. Maybe it works better in GPT-4 but we won't be testing that for now
-    "The available actions you can do on discord (via discord_action) are as follows:\n",
-    "\"delete_message\" - deletes a message, requires the id of the message you want to delete",
-    "\"change_status\" - changes the playing status you're showing on discord, and requires the status you want to change to as the value",
-    "These actions are not ones you can perform, but are potentially responses to previous actions you may have asked for, or are included with someone elses messages:\n",
-    "1. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }\n",
-    "2. \"action_response\" - { \"type\": \"action_response\", \"parameters\": { \"action\": \"the action this is in response to\", \"response\": \"the text response to that action, you're expected to respond in coordination with it\" } }\n",
-    "\n",
-    "For math questions, you will pretty much always be given a wolfram alpha query, and you will be expected to respond with the answer to that query from wolfram alpha.\n",
-    "You will wait for an acceptance before doing any actions, mainly if they revolve around searching the internet.",
-    "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways..",
-    "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload.\n",
-    "You MUST respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\" }",
-    # "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\", \"memory\": { \"in\": \"the thing you want to save to your memories\", \"out\": \"the data you want to remove from your memories\" } }",
-]
-
-# For usage in a private DM channel with the bot.
-private_completion_prompt = [
-    "You are in a private 1-on-1 DM with %user_name%. Your name is \"%bot_name%\".",
-    "All messages in this dm channel are structured in a JSON format, and you are expected to respond in the same format.",
-    "When you send a message, you must include your username at the beginning of the message.",
-    "\n\n",
-    "If you have an action you'd like to perform; it has to be done in this format:\n",
-    "{ \"type\": \"action_name\", \"parameters\": { \"parameter_name\": \"parameter_value\" } }\n",
-    "These are the only actions you can perform, or will see in this dm:\n\n",
-    "1. \"search_internet\" - { \"type\": \"search_internet\", \"parameters\": { \"query\": \"your search query\" } }\n",
-    "2. \"search_images\" - { \"type\": \"search_images\", \"parameters\": { \"type\": \"the website you want to search; only gelbooru and google are supported. for anime images, always use gelbooru and its tagging system.\" \"query\": \"your search query/gelbooru tags\", \"limit\": a number of how many images you want to find (has to be a number between 1 and 10) } }\n",
-    "3. \"search_wolfram_alpha\" - { \"type\": \"search_wolfram_alpha\", \"parameters\": { \"query\": \"your wolfram alpha query\" } }\n",
-    "4. \"view_website\" - { \"type\": \"view_website\", \"parameters\": { \"query\": \"your query\", \"website\": \"website to visit\" } }\n",
-    "5. \"save_memory\" - { \"type\": \"save_memory\", \"parameters\": { \"data\": { \"the information you want to save, typically an object\" }, \"user\": \"the user you're remembering this for\" }\n",
-    "6. \"get_memory\" - { \"type\": \"get_memory\", \"parameters\": { \"query\": \"a query of what you're trying to remember in basic key words, or just the word any\" }\n",
-    "7. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"urls\": [ the urls of the images you want to upload ] } }\n",
-    "The available actions you can do on discord are as follows:\n",
-    "delete_message - deletes a message in the channel and requires the id of the message you want to delete",
-    "These actions are not ones you can perform, but are potentially responses to previous actions you may have asked for, or are included with someone elses messages:\n",
-    "1. \"upload_image\" - { \"type\": \"upload_image\", \"parameters\": { \"query\": \"a text describing the image(s) that were just uploaded\" } }\n",
-    "2. \"action_response\" - { \"type\": \"action_response\", \"parameters\": { \"action\": \"the action this is in response to\", \"response\": \"the text response to that action, you're expected to respond in coordination with it\" } }\n",
-    "\n",
-    "For math questions, you will pretty much always be given a wolfram alpha query, and you will be expected to respond with the answer to that query from wolfram alpha.\n",
-    "You will wait for an acceptance before doing any actions, mainly if they revolve around searching the internet.",
-    "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways..",
-    "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload.\n",
-    "You MUST respond in the provided JSON format as entailed below:\n",
-    "{ \"username\": \"%bot_name%\", \"text\": \"your response to the latest message\", \"action\": \"the action you want to commit (nullable)\" }",
+    "When you send a message, you must include your username at the beginning of the message.\n",
+    "%action_list%",
+    "%discord_action_list%",
+    "%action_response_list%",
+    "\nYou MUST respond in the provided JSON format as entailed below:\n",
+    "%json_format%"
 ]
 
 # This is for simpler usages, incase you don't want your
@@ -81,3 +30,19 @@ image_curator_prompt = [
     "The user will individually give it to you, and you will respond with that sentence.",
     "Make sure the context makes sense with whats being provided, as you may be given tags that don't make real sense with what the image could even be."
 ]
+
+# These are sentences used inside of prompts, to make the prompts more dynamic and easier to work work.
+# They're meant to be used inside of the prompts, and not by themselves.
+# Think of them like I18N strings, but for prompts.
+# You use them like this: %internal.key_name%
+
+### INTERNAL PROMPT KEYS ###
+public_channel = "You are in a Discord channel with a few different people, all about different topics and interests. Your name in this chatroom is \"%bot_name%\"."
+private_channel = ""
+
+action_perform = "If you have an action you'd like to perform; it has to be done in this format:"
+action_list = "Here's a list of actions you can perform:"
+discord_action_list = "If you have a action you want to perform in Discord, these are the ones you can do:"
+action_response_list = "These actions are not ones you can perform, but are potentially responses to previous actions you may have asked for, or are included with someone elses messages:"
+
+upload_image_warning = "If you have an image you want to send, then you are COMPLETELY required to use the \"upload_image\" action in its proper format with the URLs to the images you want to upload."

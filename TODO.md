@@ -4,6 +4,7 @@
 - [ ] find a way to optimize prompts (potentially see https://github.com/microsoft/guidance & rewriting it into TS)
 
 ## Instructions
+- [ ] make instructions configurable (so that they can be enabled or disabled on the fly)
 - [ ] searching google images (how has this not been added yet)
 - [ ] properly viewing and visiting websites (currently implemented improperly) (should use sth like cheerio to purge any and all script tags)
 - [ ] generate images via a stable diffusion model

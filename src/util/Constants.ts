@@ -119,6 +119,9 @@ export interface HikariTomlOptions {
              * This pairs in hand with the model option.
              */
             source: SourceType;
+
+            actions: string[];
+            discord_actions: string[];
         }
 
         /**

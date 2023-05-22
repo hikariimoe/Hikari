@@ -9,12 +9,15 @@ import fs from "fs";
 
 import type { Hikari } from "../Hikari";
 import { Source } from "../structures/Source";
+import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
 
 export enum ProxyType {
     Aicg
 }
 
 export interface Prompts {
+    [key: string]: string | string[];
+
     completion_prompt: string[];
     private_completion_prompt: string[];
     image_curator_prompt: string[];
@@ -51,26 +54,19 @@ export class Agent {
 
         this.logger.debug("Agent: Initializing the agent...");
         this.logger.trace("Agent: Parsing prompts for the agent.");
-        
+
         this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
 
-        this.prompt = `${
-            this.client.configuration.bot.information.prompt.join(" ")
-        }\n\n${
-            this.internal_prompts.completion_prompt.join(" ")
-        }`;
+        // TODO
+        this.prompt = `${this.getBasePrompt("prompt")}\n\n\n${this.getPrompt("completion_prompt")}`;
 
         if (this.client.configuration.bot.information.dm_prompt.length === 0) {
             this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
 
-            this.client.configuration.bot.information.dm_prompt = this.client.configuration.bot.information.prompt;
+            this.dm_prompt = `${this.getBasePrompt("prompt")}\n\n${this.getPrompt("completion_prompt")}`;
+        } else {
+            this.dm_prompt = `${this.getBasePrompt("dm_prompt")}\n\n${this.getPrompt("completion_prompt")}`;
         }
-        
-        this.dm_prompt = `${
-            this.client.configuration.bot.information.dm_prompt.join(" ")
-        }\n\n${
-            this.internal_prompts.private_completion_prompt.join(" ")
-        }`;
 
         const source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source);
 
@@ -81,7 +77,7 @@ export class Agent {
         }
 
         this.source = source;
-        
+
         this.openaiConfig = new Configuration();
         this.assignPromptValues();
     }
@@ -91,7 +87,11 @@ export class Agent {
     }
 
     public getPrompt(key: keyof Prompts) {
-        return this.internal_prompts[key].join(" ");
+        return (this.internal_prompts[key] as string[]).join(" ").replace(/\n\s/g, "\n");
+    }
+
+    public getBasePrompt(key: "prompt" | "dm_prompt") {
+        return this.client.configuration.bot.information[key].join(" ").replace(/\n\s/g, "\n");
     }
 
     /**
@@ -110,11 +110,11 @@ export class Agent {
             const channel = this.client.channels.resolve(resolvable) ?? await this.client.channels.fetch(
                 resolvable as string
             );
-            
+
             this.logger.info("Agent: Handling the creation of a context for channel", channel?.id);
             this.contexts.set(resolvable, new Context(this, channel as TextBasedChannel));
         }
- 
+
         return this.contexts.get(resolvable);
     }
 
@@ -214,7 +214,7 @@ export class Agent {
                 data,
             };
         }
-        
+
         this.logger.debug("Agent: Gathered a list of workable proxies.");
         this.logger.debug("Agent: Proxy List Size:", Object.keys(proxies).length);
         this.logger.trace("Agent: Determining which one works the best for our usecases");
@@ -240,11 +240,127 @@ export class Agent {
     }
 
     private assignPromptValues() {
-        this.prompt = this.prompt
-            .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
+        this.prompt = this.handleActionList(this.prompt)
 
-        this.dm_prompt = this.dm_prompt
-            .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
-            
+        const regex = /%([\w.]*)%/g;
+
+        for (let match of this.prompt.matchAll(regex)) {
+            switch (match[1]) {
+                case "bot_name":
+                    this.prompt = this.prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
+                    break;
+
+                default:
+                    if (match[1].startsWith("internal")) {
+                        const key = match[1].split(".")[1];
+
+                        console.log(key);
+
+                        if (key in this.internal_prompts) {
+                            this.prompt = this.prompt.replace(match[0], this.internal_prompts[key] as string);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        console.log(this.prompt)
+
+        //this.dm_prompt = this.handleActionList(this.dm_prompt)
+        //    .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
+    }
+
+    // TODO: Jesus christ this is a mess
+    private handleActionList(prompt: string): string {
+        const allowedActions = this.client.configuration.bot.ai.actions;
+        const allowedDiscordActions = this.client.configuration.bot.ai.discord_actions;
+
+        const instructions = [];
+        const responses = [];
+        const discordActions = [];
+        const imageInstructions = [
+            "search_images",
+        ];
+
+        for (let key of Object.keys(InstructionData)) {
+            if (!allowedActions.includes(key)) {
+                continue;
+            }
+
+            instructions.push(`"${key}" - ${JSON.stringify(InstructionData[key as keyof typeof InstructionData])}`);
+        }
+
+        for (let key of Object.keys(InstructionResponseData)) {
+            responses.push(`"${key}" - ${JSON.stringify(InstructionResponseData[key as keyof typeof InstructionResponseData])}`);
+        }
+
+        if (allowedActions.includes("discord_action")) {
+            for (let key of Object.keys(DiscordInstructionData)) {
+                if (!allowedDiscordActions.includes(key)) {
+                    continue;
+                }
+                
+                discordActions.push(`"${key}" - ${DiscordInstructionData[key as keyof typeof DiscordInstructionData]}`);
+            }
+        }
+
+        if (instructions.length == 0) {
+            prompt = prompt.replace(/%action_list%/g, "\n")
+        } else {
+            prompt = prompt.replace(/%action_list%/g, [
+                "\n\n%internal.action_perform%",
+                JSON.stringify({
+                    type: "action_name",
+                    parameters: {
+                        parameter_name: "parameter_value"
+                    }
+                }),
+                "\n",
+                "%internal.action_list%",
+                ...instructions,
+            ].join("\n"));
+        }
+
+        if (discordActions.length == 0) {
+            prompt = prompt.replace(/%discord_action_list%/g, "");
+        } else {
+            prompt = prompt.replace(/%discord_action_list%/g, [
+                "\n\n\n%internal.discord_action_list%",
+                ...discordActions,
+            ].join("\n"));
+        }
+
+        if (instructions.length == 0 || responses.length == 0) {
+            prompt = prompt.replace(/%action_response_list%/g, "");
+        } else {
+            prompt = prompt.replace(/%action_response_list%/g, [
+                "\n\n\n%internal.action_response_list%",
+                ...responses,
+                ["\n\nFor math questions, you will pretty much always be given a wolfram alpha query, and you will be expected to respond with the answer to that query from wolfram alpha.",
+                "You will wait for an acceptance before doing any actions, mainly if they revolve around searching the internet.",
+                "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways.",
+                "%internal.upload_image_warning%"].join(" "),
+                "\n"
+            ].join("\n"));
+        }
+
+        if (instructions.filter(x => imageInstructions.includes(JSON.parse(x.split(" - ")[0]))).length == 0) {
+            prompt = prompt.replace("%internal.upload_image_warning%", "");
+        }
+
+        if (instructions.length == 0) {
+            prompt = prompt.replace("%json_format%", JSON.stringify({
+                username: "%bot_name%",
+                text: "your response to the latest message",
+            }));
+        } else {
+            prompt = prompt.replace("%json_format%", JSON.stringify({
+                username: "%bot_name%",
+                text: "your response to the latest message",
+                action: "the action you want to perform (nullable)"
+            }));
+        }
+
+        return prompt.replace(/\n\s/g, "\n");
     }
 }

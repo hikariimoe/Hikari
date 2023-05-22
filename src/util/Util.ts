@@ -21,6 +21,10 @@ export class Util {
         const object = destruct ? Util.destructure(obj) : obj;
         
         if (Array.isArray(object)) {
+            if (object.length == 0) {
+                return null;
+            }
+            
             return object.filter(
                 (x) => typeof x != "undefined" && x != null
             ).map((x) => typeof x == "object" ? this.shrink(x) : x) as T;
