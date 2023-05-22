@@ -2,16 +2,21 @@ import { Source, Prompt } from "../src/structures/Source";
 import { SourceType } from "../src/util/Constants";
 import { Agent } from "../src/ai/Agent";
 import { SourceError, SourceErrorType, SourceErrorData } from "../src/util/errors/SourceError";
-import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
+import { Configuration, OpenAIApi, ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum } from "openai";
 import { Message } from "discord.js";
 
 export class OpenAISource extends Source {
+    private ai: OpenAIApi;
+    
     constructor(context: Source.Context) {
         super(context, {
             name: "openai",
             title: "OpenAISource",
             type: SourceType.OpenAI
         });
+
+        const { client: { agent: { openaiConfig } } } = this.container;
+        this.ai = new OpenAIApi(openaiConfig);
     }
 
     async prompt(prompts: Prompt[], message: Message, model?: string): Promise<string | Promise<string>> {
@@ -33,7 +38,7 @@ export class OpenAISource extends Source {
                     } satisfies ChatCompletionRequestMessage
                 })
 
-                completionStream = (await agent.ai?.createChatCompletion({
+                completionStream = (await this.ai.createChatCompletion({
                     model: model ?? "gpt-3.5-turbo",
                     stream: true,
                     messages: cleanPrompts
@@ -121,4 +126,6 @@ export class OpenAISource extends Source {
             })
         });
     }
+
+    
 }

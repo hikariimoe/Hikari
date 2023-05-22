@@ -1,6 +1,7 @@
-
+import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
 import { TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
-import { Configuration, OpenAIApi } from "openai";
+import { Source } from "../structures/Source";
+import { Configuration } from "openai";
 import { Context } from "./Context";
 import { load } from "cheerio";
 import fetch from "node-fetch";
@@ -8,8 +9,6 @@ import toml from "toml";
 import fs from "fs";
 
 import type { Hikari } from "../Hikari";
-import { Source } from "../structures/Source";
-import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
 
 export enum ProxyType {
     Aicg
@@ -17,7 +16,6 @@ export enum ProxyType {
 
 export interface Prompts {
     [key: string]: string | string[];
-
     completion_prompt: string[];
     private_completion_prompt: string[];
     image_curator_prompt: string[];
@@ -27,8 +25,6 @@ export interface Prompts {
  * An abstraction to work away everything related to AI functionality, and properly separate it from the rest of the code.
  */
 export class Agent {
-    /** The OpenAI API instance. */
-    public ai?: OpenAIApi;
     /** The assigned name of te bot */
     public name: string;
     /** The configured prompt to use for the AI. */
@@ -39,10 +35,15 @@ export class Agent {
     public internal_prompts: Prompts;
     /** The GPT model to use when creating completions.  */
     public model: string;
-    /** The configuration for the OpenAI API. */
-    public openaiConfig!: Configuration;
     /** Propogated events to the AI Agent from text channels. */
     public contexts: Map<TextBasedChannelResolvable, Context>;
+    // TODO: We should eventually find a way to remove this property and move it to the according source.
+    //       In order to do that however, we also need to find a way to have the configuration
+    //       statically available to the source at startup so that there's no cold time start (when it's looking for a proxy)
+    //       whenever a user sends a message.
+    //
+    //       ~ Alya
+    public openaiConfig?: Configuration;
     public source!: Source;
 
     constructor(
@@ -56,28 +57,23 @@ export class Agent {
         this.logger.trace("Agent: Parsing prompts for the agent.");
 
         this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
-
-        // TODO
         this.prompt = `${this.getBasePrompt("prompt")}\n\n\n${this.getPrompt("completion_prompt")}`;
-
-        if (this.client.configuration.bot.information.dm_prompt.length === 0) {
+        
+        if (this.client.configuration.bot.information.dm_prompt.length == 0) {
             this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
-
+            
             this.dm_prompt = `${this.getBasePrompt("prompt")}\n\n${this.getPrompt("completion_prompt")}`;
         } else {
             this.dm_prompt = `${this.getBasePrompt("dm_prompt")}\n\n${this.getPrompt("completion_prompt")}`;
         }
-
-        const source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source);
-
-        if (!source) {
+        
+        if (!this.client.stores.get("sources").has(this.client.configuration.bot.ai.source)) {
             this.logger.fatal("Agent: The source provided in the configuration file does not exist.");
             this.logger.fatal("Agent: Please check your configuration file and try again.");
             return process.exit(1);
         }
-
-        this.source = source;
-
+        
+        this.source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source)!;
         this.openaiConfig = new Configuration();
         this.assignPromptValues();
     }
@@ -87,18 +83,13 @@ export class Agent {
     }
 
     public getPrompt(key: keyof Prompts) {
-        return (this.internal_prompts[key] as string[]).join(" ").replace(/\n\s/g, "\n");
+        return (this.internal_prompts[key] as string[])
+            .join(" ").replace(/\n\s/g, "\n");
     }
 
     public getBasePrompt(key: "prompt" | "dm_prompt") {
-        return this.client.configuration.bot.information[key].join(" ").replace(/\n\s/g, "\n");
-    }
-
-    /**
-     * Creates the OpenAI API instance.
-     */
-    public create() {
-        this.ai = new OpenAIApi(this.openaiConfig);
+        return this.client.configuration.bot.information[key]
+            .join(" ").replace(/\n\s/g, "\n");
     }
 
     /**
@@ -183,184 +174,158 @@ export class Agent {
             });
 
             // Test the proxy for an OpenAI API call
-            if (ppx.status != 404) {
-                if (ppx.status == 401) {
-                    if (this.client.configuration.proxy.keys[proxy]) {
-                        this.client.logger.error(
-                            "Agent: Proxy",
-                            this.client.logger.color.hex("#a7e5fa")(proxy),
-                            "has an invalid API key."
-                        );
-                    } else {
-                        this.client.logger.error(
-                            "Agent: Proxy",
-                            this.client.logger.color.hex("#a7e5fa")(proxy),
-                            "is missing an API key even though it requires one."
-                        );
-                    }
+            if (ppx.status == 401) {
+                if (this.client.configuration.proxy.keys[proxy]) {
+                    this.client.logger.error(
+                        "Agent: Proxy",
+                        this.client.logger.color.hex("#a7e5fa")(proxy),
+                        "has an invalid API key."
+                    );
                 } else {
                     this.client.logger.error(
                         "Agent: Proxy",
                         this.client.logger.color.hex("#a7e5fa")(proxy),
-                        "didn't return 404, so it's not a valid proxy."
+                        "is missing an API key even though it requires one."
                     );
                 }
-                continue;
+            } else if (ppx.status != 404) {
+                this.client.logger.error(
+                    "Agent: Proxy",
+                    this.client.logger.color.hex("#a7e5fa")(proxy),
+                    "didn't return 404, so it's not a valid proxy."
+                );
+            } else {
+                proxies[proxy] = {
+                    time: Date.now() - start,
+                    type: ProxyType.Aicg, // TODO: Add proper proxy type detection
+                    data,
+                };
             }
-
-            proxies[proxy] = {
-                time: Date.now() - start,
-                type: ProxyType.Aicg, // TODO: Add proper proxy type detection
-                data,
-            };
         }
 
+        const proxyCount = Object.keys(proxies).length;
         this.logger.debug("Agent: Gathered a list of workable proxies.");
-        this.logger.debug("Agent: Proxy List Size:", Object.keys(proxies).length);
+        this.logger.debug("Agent: Proxy List Size:", proxyCount);
         this.logger.trace("Agent: Determining which one works the best for our usecases");
 
-        if (Object.keys(proxies).length === 0) {
+        if (proxyCount == 0) {
             this.client.logger.fatal("Agent: No proxies were found to be valid. Please check your configuration.");
             process.exit(1);
         }
 
-        const fastest = Object.keys(proxies).reduce(
+        const proxy = Object.keys(proxies).reduce(
             (a, b) => proxies[a].time < proxies[b].time ? a : b
         );
 
-        const proxy = proxies[fastest];
-        const basePath = proxy.data.endpoints.openai;  // TODO: support proxy types
-        this.openaiConfig = new Configuration({ basePath });
-
         this.client.logger.info(
             "Agent: Proxy",
-            this.client.logger.color.yellow(fastest),
+            this.client.logger.color.yellow(proxy),
             "was found to be the best proxy available, and will be used."
         );
+
+        // TODO: support proxy types
+        this.openaiConfig = new Configuration({
+            basePath: proxies[proxy].data.endpoints.openai
+        });
     }
 
     private assignPromptValues() {
-        this.prompt = this.handleActionList(this.prompt)
+        this.prompt = this.handleActionList(this.prompt);
 
-        const regex = /%([\w.]*)%/g;
-
-        for (let match of this.prompt.matchAll(regex)) {
-            switch (match[1]) {
-                case "bot_name":
-                    this.prompt = this.prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
-                    break;
-
-                default:
-                    if (match[1].startsWith("internal")) {
-                        const key = match[1].split(".")[1];
-
-                        console.log(key);
-
-                        if (key in this.internal_prompts) {
-                            this.prompt = this.prompt.replace(match[0], this.internal_prompts[key] as string);
-                        }
-                    }
-                    break;
+        for (const match of this.prompt.matchAll(/%([\w.]*)%/g)) {
+            if (match[1] == "bot_name") {
+                this.prompt = this.prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
+            } else if (match[1].startsWith("internal")) {
+                this.prompt = this.prompt.replace(
+                    match[0],
+                    this.internal_prompts[match[1].split(".")[1]].toString() || "$&"
+                );
             }
         }
 
-        console.log(this.prompt)
-
-        //this.dm_prompt = this.handleActionList(this.dm_prompt)
-        //    .replace(/%bot_name%/g, this.client.configuration.bot.information.bot_name);  // TODO: add more parameters LOL
+        console.log(this.prompt);
     }
 
-    // TODO: Jesus christ this is a mess
     private handleActionList(prompt: string): string {
-        const allowedActions = this.client.configuration.bot.ai.actions;
-        const allowedDiscordActions = this.client.configuration.bot.ai.discord_actions;
+        // TODO: Jesus christ this is a mess
+        // upd: still a mess imo but better than it was before
 
-        const instructions = [];
-        const responses = [];
-        const discordActions = [];
+        const allowedDiscordActions = this.client.configuration.bot.ai.discord_actions;
+        const allowedActions = this.client.configuration.bot.ai.actions;
+
+        const instructions = Object.entries(InstructionData)
+            .filter(([key]) => allowedActions.includes(key))
+            .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
+        //  ^^^^ this is repeated 3 times, maybe move to a separate function?
+
+        const responses = Object.entries(InstructionResponseData)
+            .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
+        
+        const discordActions = allowedActions.includes("discord_action")
+            ? Object.entries(DiscordInstructionData)
+                .filter(([key]) => allowedDiscordActions.includes(key))
+                .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`)
+            : [];
+        
         const imageInstructions = [
-            "search_images",
+            "search_images"
         ];
 
-        for (let key of Object.keys(InstructionData)) {
-            if (!allowedActions.includes(key)) {
-                continue;
-            }
-
-            instructions.push(`"${key}" - ${JSON.stringify(InstructionData[key as keyof typeof InstructionData])}`);
-        }
-
-        for (let key of Object.keys(InstructionResponseData)) {
-            responses.push(`"${key}" - ${JSON.stringify(InstructionResponseData[key as keyof typeof InstructionResponseData])}`);
-        }
-
-        if (allowedActions.includes("discord_action")) {
-            for (let key of Object.keys(DiscordInstructionData)) {
-                if (!allowedDiscordActions.includes(key)) {
-                    continue;
-                }
-                
-                discordActions.push(`"${key}" - ${DiscordInstructionData[key as keyof typeof DiscordInstructionData]}`);
-            }
-        }
-
-        if (instructions.length == 0) {
-            prompt = prompt.replace(/%action_list%/g, "\n")
-        } else {
-            prompt = prompt.replace(/%action_list%/g, [
-                "\n\n%internal.action_perform%",
+        return prompt
+            .replace(
+                /%action_list%/g,
+                instructions.length > 0
+                ? [
+                    "\n\n%internal.action_perform%",
+                    JSON.stringify({
+                        type: "action_name",
+                        parameters: {
+                            parameter_name: "parameter_value"
+                        }
+                    }),
+                    "\n",
+                    "%internal.action_list%",
+                    ...instructions,
+                ].join("\n") : "\n"
+            )
+            .replace(
+                /%discord_action_list%/g,
+                discordActions.length > 0
+                ? [
+                    "\n\n\n%internal.discord_action_list%",
+                    ...discordActions,
+                ].join("\n") : "\n"
+            )
+            .replace(
+                /%action_response_list%/g,
+                instructions.length > 0 && responses.length > 0
+                ? [
+                    "\n\n\n%internal.action_response_list%",
+                    ...responses,
+                    "%internal.math_warning%",
+                    "%internal.upload_image_warning%"
+                ].join("\n") : "\n"
+            )
+            .replace(
+                /%json_format%/g,
                 JSON.stringify({
-                    type: "action_name",
-                    parameters: {
-                        parameter_name: "parameter_value"
-                    }
-                }),
-                "\n",
-                "%internal.action_list%",
-                ...instructions,
-            ].join("\n"));
-        }
-
-        if (discordActions.length == 0) {
-            prompt = prompt.replace(/%discord_action_list%/g, "");
-        } else {
-            prompt = prompt.replace(/%discord_action_list%/g, [
-                "\n\n\n%internal.discord_action_list%",
-                ...discordActions,
-            ].join("\n"));
-        }
-
-        if (instructions.length == 0 || responses.length == 0) {
-            prompt = prompt.replace(/%action_response_list%/g, "");
-        } else {
-            prompt = prompt.replace(/%action_response_list%/g, [
-                "\n\n\n%internal.action_response_list%",
-                ...responses,
-                ["\n\nFor math questions, you will pretty much always be given a wolfram alpha query, and you will be expected to respond with the answer to that query from wolfram alpha.",
-                "You will wait for an acceptance before doing any actions, mainly if they revolve around searching the internet.",
-                "If you have an action you want to do, text should always be undefined, or avoidant of anything that could be redundant as you're going to respond on the next message with the result anyways.",
-                "%internal.upload_image_warning%"].join(" "),
-                "\n"
-            ].join("\n"));
-        }
-
-        if (instructions.filter(x => imageInstructions.includes(JSON.parse(x.split(" - ")[0]))).length == 0) {
-            prompt = prompt.replace("%internal.upload_image_warning%", "");
-        }
-
-        if (instructions.length == 0) {
-            prompt = prompt.replace("%json_format%", JSON.stringify({
-                username: "%bot_name%",
-                text: "your response to the latest message",
-            }));
-        } else {
-            prompt = prompt.replace("%json_format%", JSON.stringify({
-                username: "%bot_name%",
-                text: "your response to the latest message",
-                action: "the action you want to perform (nullable)"
-            }));
-        }
-
-        return prompt.replace(/\n\s/g, "\n");
+                    username: "%bot_name%",
+                    text: "your response to the latest message",
+                    ...(
+                        instructions.length > 0 ? {
+                            action: "the action you want to perform (nullable)"
+                        } : {}
+                    )
+                })
+            )
+            .replace(
+                /%internal.upload_image_warning%/g,
+                instructions.filter(
+                    (x) => imageInstructions.includes(
+                        x.match(/"(.+?)"/)![1]
+                    )
+                ).length > 0 ? "$&" : ""
+            )
+            .replace(/\n\s/g, "\n");
     }
 }

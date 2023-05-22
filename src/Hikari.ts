@@ -54,7 +54,6 @@ export class Hikari extends SapphireClient {
         // Create the agent.
         this._agent = new Agent(this);
         await this._agent.attemptSetProxy();
-        this._agent.create();
 
         return super.login(this.configuration.bot.token);
     }

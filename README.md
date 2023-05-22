@@ -42,6 +42,14 @@ If you would like to contribute to the project, **please** inform a developer vi
 * Node.js v18
 * PostgreSQL v12
 * Any form of access to GPT-3.5, or GPT-4 (Use GPT-4 for the best possible results.)
+* An Saucenao API Key
+* An Wolfram Alpha API Key
+
+#### Optional Requirements
+
+* An OpenAI API Key
+* An instance of the [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui/)
+
 
 ### Support
 
