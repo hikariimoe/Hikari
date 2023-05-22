@@ -58,8 +58,6 @@ export class Context {
             try {
                 const res = await this.agent.source.prompt(prompts, this.currentMessage!, model);
 
-                console.log(res);
-
                 if (typeof res === "string") {
                     return resolve(res);
                 } else {
@@ -657,8 +655,6 @@ export class Context {
         }
 
         this.contextPrompt += `\n\n${this.agent.getCompletionPrompt(this.channel)}`;
-
-        console.log(this.contextPrompt)
 
 
         this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.context_memory_limit), "messages in the channel");
