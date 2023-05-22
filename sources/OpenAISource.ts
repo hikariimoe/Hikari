@@ -11,8 +11,6 @@ export class OpenAISource extends Source {
             title: "OpenAISource",
             type: SourceType.OpenAI
         });
-
-        console.log("cock");
     }
 
     async prompt(prompts: Prompt[], model?: string): Promise<string | Promise<string>> {
@@ -48,8 +46,6 @@ export class OpenAISource extends Source {
                     this.logger.warn("Rate limited, waiting", this.logger.color.hex("#ff7de3")(until), "ms.");
                     return reject(new SourceError(SourceErrorType.Ratelimited, { until }));
                 }
-
-                console.log(e);
             }
 
             let result = "";
@@ -67,11 +63,9 @@ export class OpenAISource extends Source {
                         queued == true ? reject2(error) : reject(error);
                     }
                 }
-                
+
                 let values = data.toString().split("\n")
                     .filter((line) => line.trim() !== "");
-
-                    console.log(data.toString());
 
                 for (let value of values) {
                     if (value.startsWith("data: ")) {
@@ -117,7 +111,6 @@ export class OpenAISource extends Source {
                         json = JSON.parse(value);
                     } catch (e: any) {
                         completionStream?.data.destroy();
-                        console.log(value);
                         return queue.reject(new SourceError(SourceErrorType.MalformedResponse, {
                             data: e.message
                         }));
