@@ -6,6 +6,8 @@ import { jsonrepair } from "jsonrepair";
 import { Util } from "../util/Util";
 import { Agent } from "./Agent";
 import { ContextMemory } from "./ContextMemory";
+import { Prompt } from "../structures/Source";
+import { SourceError, SourceErrorType } from "../util/errors/SourceError";
 
 export interface ContextEvent {
     text?: string;
@@ -49,123 +51,152 @@ export class Context {
     }
 
     // TODO: Also split this up into multiple functions, and check if the bot starts reciting its own prompts
-    async handleCompletion(prompts: ChatCompletionRequestMessage[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
-        return await new Promise(async (resolve, reject) => {
-            this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
-            let completionStream: any;
+    async handleCompletion(prompts: Prompt[], sendReply: boolean = false, model: string = this.agent.model): Promise<string> {
+        return await new Promise(async(resolve, reject) => {
             try {
-                completionStream = (await this.agent.ai?.createChatCompletion({
-                    model: model,
-                    stream: true,
-                    messages: prompts
-                }, {
-                    responseType: "stream"
-                }))
-                
-            } catch (e: any) {
-                if (e.response && e.response.status === 429) {
-                    this.ratelimited = true;
-                    const until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
+                const res = await this.agent.source.prompt(prompts, model);
 
-                    let rl: Message | undefined;
-                    if (sendReply) {
-                        rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
-                    }
-
-                    this.agent.logger.warn("Agent: Rate limited, waiting", this.agent.logger.color.hex("#7dffbc")(until), "ms");
-
-                    setTimeout(async () => {
-                        this.ratelimited = false;
-
-                        await rl?.delete();
-                        resolve(await this.handleCompletion(prompts, sendReply ? false : sendReply, model));
-                    }, until);
+                if (typeof res === "string") {
+                    return resolve(res);
                 } else {
-                    this.agent.logger.error("Agent: Error while creating completion request:", e);
+                    this.agent.logger.debug("Agent: queued message here");
 
-                    if (e.response) {
-                        console.log(e.response)
-                    }
-
-                    reject(undefined);
+                    return resolve(await res);
                 }
+            } catch (e: any) { // you actually used to be able to type errors this way
+                if (e instanceof SourceError) {
+                    if (e.type == SourceErrorType.Ratelimited) {
+                        this.ratelimited = true;
+                        
+                        setTimeout(async () => {
+                            this.ratelimited = false;
+                            resolve(await this.handleCompletion(prompts, sendReply, model));
+                        }, e.data.until);
+                    } else {
+                        return reject(e);
+                    }
+                }
+                
+                resolve("");
             }
-
-            let result = "";
-            let sentQueueMessage = false;
-            let queueMessage: Message | undefined; ``
-            // @ts-ignore
-            // don't think there's a type for this lol 
-            completionStream?.data.on("data", async (data: Buffer) => {
-                if (data.includes("queue")) {
-                    // Well Fuck
-                    if (sentQueueMessage == false && sendReply == true) {
-                        this.agent.logger.debug("Agent: Request has been enqueued, waiting for freedom before we can continue.");
-                        queueMessage = await this.currentMessage?.reply(`(enqueued request, please wait for a response~)`);
-                        sentQueueMessage = true;
-                    }
-
-                    return;
-                }
-
-                let values = data.toString().split("\n")
-                    .filter((line) => line.trim() !== "");
-
-                for (let value of values) {
-                    if (value.startsWith("data: ")) {
-                        value = value.replace("data: ", "");
-                    }
-
-                    // trim newlines
-                    if (value === "[DONE]") {
-                        // @ts-ignore
-                        if (sentQueueMessage == true) {
-                            await queueMessage?.delete();
-                        }
-
-                        if (result.includes("upstream error")) {
-                            if (result.includes("server_error")) {
-                                this.agent.logger.error("Agent: The OpenAI API is currently experiencing major issues, so we can't continue.");
-                                this.agent.logger.error("Agent: Please try again later, or contact the developer if this issue persists.");
-
-                                await this.currentMessage?.delete();
-                            }
-
-                            reject(undefined);
-                            break;
-                        }
-
-                        this.agent.logger.trace("Agent: Request has been completed, returning result.");
-
-                        completionStream?.data.destroy();
-                        resolve(result);
-
-                        break;
-                    }
-
-                    let json;
-                    try {
-                        json = JSON.parse(value);
-                    } catch (e) {
-                        completionStream?.data.destroy();
-                        reject(result);
-
-                        break;
-                    }
-
-                    this.agent.logger.trace("Agent: Recieved completion data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
-
-                    if (json.choices) {
-                        json.choices.forEach((choice: any) => {
-                            if (choice.delta.content) {
-                                result += choice.delta.content;
-                            }
-                        });
-                    }
-                }
-
-            })
         })
+        
+        // return await new Promise(async (resolve, reject) => {
+        //     this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
+        //     let completionStream: any;
+        //     try {
+        //         completionStream = (await this.agent.ai?.createChatCompletion({
+        //             model: model,
+        //             stream: true,
+        //             messages: prompts
+        //         }, {
+        //             responseType: "stream"
+        //         }))
+                
+        //     } catch (e: any) {
+        //         if (e.response && e.response.status === 429) {
+        //             this.ratelimited = true;
+        //             const until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
+
+        //             let rl: Message | undefined;
+        //             if (sendReply) {
+        //                 rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
+        //             }
+
+        //             this.agent.logger.warn("Agent: Rate limited, waiting", this.agent.logger.color.hex("#7dffbc")(until), "ms");
+
+        //             setTimeout(async () => {
+        //                 this.ratelimited = false;
+
+        //                 await rl?.delete();
+        //                 resolve(await this.handleCompletion(prompts, sendReply ? false : sendReply, model));
+        //             }, until);
+        //         } else {
+        //             this.agent.logger.error("Agent: Error while creating completion request:", e);
+
+        //             if (e.response) {
+        //                 console.log(e.response)
+        //             }
+
+        //             reject(undefined);
+        //         }
+        //     }
+
+        //     let result = "";
+        //     let sentQueueMessage = false;
+        //     let queueMessage: Message | undefined; ``
+        //     // @ts-ignore
+        //     // don't think there's a type for this lol 
+        //     completionStream?.data.on("data", async (data: Buffer) => {
+        //         if (data.includes("queue")) {
+        //             // Well Fuck
+        //             if (sentQueueMessage == false && sendReply == true) {
+        //                 this.agent.logger.debug("Agent: Request has been enqueued, waiting for freedom before we can continue.");
+        //                 queueMessage = await this.currentMessage?.reply(`(enqueued request, please wait for a response~)`);
+        //                 sentQueueMessage = true;
+        //             }
+
+        //             return;
+        //         }
+
+        //         let values = data.toString().split("\n")
+        //             .filter((line) => line.trim() !== "");
+
+        //         for (let value of values) {
+        //             if (value.startsWith("data: ")) {
+        //                 value = value.replace("data: ", "");
+        //             }
+
+        //             // trim newlines
+        //             if (value === "[DONE]") {
+        //                 // @ts-ignore
+        //                 if (sentQueueMessage == true) {
+        //                     await queueMessage?.delete();
+        //                 }
+
+        //                 if (result.includes("upstream error")) {
+        //                     if (result.includes("server_error")) {
+        //                         this.agent.logger.error("Agent: The OpenAI API is currently experiencing major issues, so we can't continue.");
+        //                         this.agent.logger.error("Agent: Please try again later, or contact the developer if this issue persists.");
+
+        //                         await this.currentMessage?.delete();
+        //                     }
+
+        //                     reject(undefined);
+        //                     break;
+        //                 }
+
+        //                 this.agent.logger.trace("Agent: Request has been completed, returning result.");
+
+        //                 completionStream?.data.destroy();
+        //                 resolve(result);
+
+        //                 break;
+        //             }
+
+        //             let json;
+        //             try {
+        //                 json = JSON.parse(value);
+        //             } catch (e) {
+        //                 completionStream?.data.destroy();
+        //                 reject(result);
+
+        //                 break;
+        //             }
+
+        //             this.agent.logger.trace("Agent: Recieved completion data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
+
+        //             if (json.choices) {
+        //                 json.choices.forEach((choice: any) => {
+        //                     if (choice.delta.content) {
+        //                         result += choice.delta.content;
+        //                     }
+        //                 });
+        //             }
+        //         }
+
+        //     })
+        // })
     }
 
     // TODO: Split this into multiple functions
@@ -194,7 +225,7 @@ export class Context {
             );
         }
 
-        const prompts: ChatCompletionRequestMessage[] = [{
+        const prompts: Prompt[] = [{
             role: "system",
             content: message.channel.type == ChannelType.DM ? this.agent.dm_prompt.replace("%user_name%", message.author.username) : this.agent.prompt
         }];
@@ -208,7 +239,7 @@ export class Context {
                     ? "assistant"
                     : "user"
                 ),
-                content: JSON.stringify(Util.omit(event, ["attempts"]))
+                content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
             });
         });
 
@@ -220,7 +251,7 @@ export class Context {
                 ? "assistant"
                 : "user"
             ),
-            content: JSON.stringify(Util.omit(event, ["attempts"]))
+            content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
         });
 
         await message.channel.sendTyping();
@@ -233,6 +264,12 @@ export class Context {
                 // Well, api's down.
                 this.handling = false;
                 return;
+            }
+
+            if (e instanceof SourceError) {
+                if (e.type == SourceErrorType.InternalError) {
+                    return undefined;
+                }
             }
 
             this.agent.logger.error("Agent: A response to the message", this.agent.logger.color.hex("#7dffbc")(message.id), "couldn't be generated, and encountered a critical problem.");

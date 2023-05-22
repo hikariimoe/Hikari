@@ -8,6 +8,7 @@ import toml from "toml";
 import fs from "fs";
 
 import type { Hikari } from "../Hikari";
+import { Source } from "../structures/Source";
 
 export enum ProxyType {
     Aicg
@@ -36,14 +37,15 @@ export class Agent {
     /** The GPT model to use when creating completions.  */
     public model: string;
     /** The configuration for the OpenAI API. */
-    public openaiConfig: Configuration;
+    public openaiConfig!: Configuration;
     /** Propogated events to the AI Agent from text channels. */
     public contexts: Map<TextBasedChannelResolvable, Context>;
+    public source!: Source;
 
     constructor(
         public client: Hikari
     ) {
-        this.model = client.configuration.proxy.model;
+        this.model = client.configuration.bot.ai.model;
         this.name = client.configuration.bot.information.bot_name;
         this.contexts = new Map();
 
@@ -69,6 +71,16 @@ export class Agent {
         }\n\n${
             this.internal_prompts.private_completion_prompt.join(" ")
         }`;
+
+        const source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source);
+
+        if (!source) {
+            this.logger.fatal("Agent: The source provided in the configuration file does not exist.");
+            this.logger.fatal("Agent: Please check your configuration file and try again.");
+            return process.exit(1);
+        }
+
+        this.source = source;
         
         this.openaiConfig = new Configuration();
         this.assignPromptValues();

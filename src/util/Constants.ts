@@ -1,5 +1,9 @@
 import { LogLevel } from "@sapphire/framework";
 
+export enum SourceType {
+    OpenAI = "openai",
+}
+
 /**
  * All of the available options for the Hikari client, assigned via TOML.
  */
@@ -12,23 +16,23 @@ export interface HikariTomlOptions {
          * The token it should use to login to discord.
          */
         token: string;
-        
+
         /**
          * The logging level to use when logging to the console.
          */
         logging_level: string;
-        
+
         /**
          * Any intents that should be enabled for the bot.
          */
         intents: string[];
-        
+
         /**
          * The amount of messages that should be cached.
          * Upon a new message sent, if this limit is reached, the oldest message will be removed from the cache.
          */
         context_memory_limit: number;
-        
+
         /**
          * Whether this bot should respond to direct messages.
          */
@@ -48,7 +52,7 @@ export interface HikariTomlOptions {
              * This is commonly used to add personality to the bot.
              */
             prompt: string[];
-            
+
             /**
              * A custom prompt to use when preparing the AI prompt, but for direct messages.
              * This is commonly used to add extra special personality to the bot.
@@ -101,6 +105,22 @@ export interface HikariTomlOptions {
             users: string[];
         }
 
+        ai: {
+
+            /**
+             * The model to use when generating a response.
+             * Models highly depends on what LLM source you're using. Make sure to check the documentation for the source you're using.
+             * Models also available depends on what proxies you have access to.
+             */
+            model: string;
+
+            /**
+             * What source of the LLM you would like to use.
+             * This pairs in hand with the model option.
+             */
+            source: SourceType;
+        }
+
         /**
          * Special API keys that are used when the AI is trying to access specific APIs.
          */
@@ -135,11 +155,6 @@ export interface HikariTomlOptions {
      * Proxy options, for avoiding the OpenAI costs.
      */
     proxy: {
-        /**
-         * The OpenAI model to use when generating a response.
-         * Models available depends on what proxies you have access to.
-         */
-        model: string;
 
         /**
          * Whether the proxy should be allowed to log prompts.
@@ -151,12 +166,12 @@ export interface HikariTomlOptions {
          * Be careful, fellow developer.
          */
         no_loggers: boolean;
-        
+
         /**
          * Whether we should be using a proxy.
          */
         use_proxy: boolean;
-        
+
         /**
          * A list of proxies URLs that we should use.
          * The bot will choose the best proxy to use, and will fallback to the next one if it fails. 
