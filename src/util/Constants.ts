@@ -4,6 +4,11 @@ export enum SourceType {
     OpenAI = "openai",
 }
 
+export enum MinimalMode {
+    Least = "least",
+    Less = "less"
+}
+
 /**
  * All of the available options for the Hikari client, assigned via TOML.
  */
@@ -58,6 +63,11 @@ export interface HikariTomlOptions {
              * This is commonly used to add extra special personality to the bot.
              */
             dm_prompt: string[];
+
+            /**
+             * 
+             */
+            sfw_addendum: string;
         };
 
         /**
@@ -122,6 +132,8 @@ export interface HikariTomlOptions {
 
             actions: string[];
             discord_actions: string[];
+            minimal: boolean;
+            minimal_mode: MinimalMode;
         }
 
         /**

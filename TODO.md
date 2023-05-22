@@ -14,7 +14,7 @@ Once that's done, people can be assigned individually to each issue and the prog
 - [/] make instructions configurable (so that they can be enabled or disabled on the fly)
 - [ ] searching google images (how has this not been added yet)
 - [ ] properly viewing and visiting websites (currently implemented improperly) (should use sth like cheerio to purge any and all script tags)
-- [ ] generate images via a stable diffusion model
+- [\] generate images via a stable diffusion model
 - [ ] potentially have the ability to read anime/manga lists
 - [ ] teach her how to embrace the power of the dark side (aka how to be a proper shitposter)
 - [ ] add the ability to search for music and potentially play it (hoooooooooooooooooooooooooooooooooooooooooooooooooooooooooo)

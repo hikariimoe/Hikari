@@ -6,7 +6,18 @@ import { Configuration, OpenAIApi, ChatCompletionRequestMessage, ChatCompletionR
 import { Message } from "discord.js";
 
 export class OpenAISource extends Source {
-    private ai: OpenAIApi;
+    private _ai?: OpenAIApi;
+    
+    get ai() {
+        if (this._ai) {
+            return this._ai;
+        }
+
+        const { client: { agent: { openaiConfig } } } = this.container;
+        this._ai = new OpenAIApi(openaiConfig);
+
+        return this._ai;
+    }
     
     constructor(context: Source.Context) {
         super(context, {
@@ -14,9 +25,6 @@ export class OpenAISource extends Source {
             title: "OpenAISource",
             type: SourceType.OpenAI
         });
-
-        const { client: { agent: { openaiConfig } } } = this.container;
-        this.ai = new OpenAIApi(openaiConfig);
     }
 
     async prompt(prompts: Prompt[], message: Message, model?: string): Promise<string | Promise<string>> {

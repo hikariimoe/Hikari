@@ -1,5 +1,5 @@
 import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
-import { TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
+import { Channel, Message, TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
 import { Source } from "../structures/Source";
 import { Configuration } from "openai";
 import { Context } from "./Context";
@@ -17,7 +17,7 @@ export enum ProxyType {
 export interface Prompts {
     [key: string]: string | string[];
     completion_prompt: string[];
-    private_completion_prompt: string[];
+    simple_completion_prompt: string[];
     image_curator_prompt: string[];
 }
 
@@ -57,14 +57,14 @@ export class Agent {
         this.logger.trace("Agent: Parsing prompts for the agent.");
 
         this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
-        this.prompt = `${this.getBasePrompt("prompt")}\n\n\n${this.getPrompt("completion_prompt")}`;
+        this.prompt = this.getBasePrompt("prompt");
         
         if (this.client.configuration.bot.information.dm_prompt.length == 0) {
             this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
             
-            this.dm_prompt = `${this.getBasePrompt("prompt")}\n\n${this.getPrompt("completion_prompt")}`;
+            this.dm_prompt = this.getBasePrompt("prompt");
         } else {
-            this.dm_prompt = `${this.getBasePrompt("dm_prompt")}\n\n${this.getPrompt("completion_prompt")}`;
+            this.dm_prompt = this.getBasePrompt("dm_prompt")
         }
         
         if (!this.client.stores.get("sources").has(this.client.configuration.bot.ai.source)) {
@@ -75,7 +75,6 @@ export class Agent {
         
         this.source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source)!;
         this.openaiConfig = new Configuration();
-        this.assignPromptValues();
     }
 
     get logger() {
@@ -90,6 +89,32 @@ export class Agent {
     public getBasePrompt(key: "prompt" | "dm_prompt") {
         return this.client.configuration.bot.information[key]
             .join(" ").replace(/\n\s/g, "\n");
+    }
+
+    public getCompletionPrompt(channel: Channel) {
+        const { minimal, minimal_mode } = this.client.configuration.bot.ai;
+        let completionPrompt: string = "";
+
+        if (minimal) {
+            switch (minimal_mode) {}
+        } else {
+            completionPrompt = this.getPrompt("completion_prompt");
+        }
+
+        // NOTE: yui do not make this a god damn one-liner
+        // :(
+        if (channel.isDMBased()) {
+            completionPrompt = completionPrompt.replace("%completion_channel%", "%internal.dm_channel%");
+        } else if (channel.isThread()) {
+            completionPrompt = completionPrompt.replace("%completion_channel", "%internal.public_channel%");
+        } else if (channel.isTextBased()) {
+            completionPrompt = completionPrompt.replace(
+                "%completion_channel%",
+                channel.nsfw ? "%internal.nsfw_channel%" : "%internal.public_channel%"
+            );
+        }
+
+        return this.assignPromptValues(completionPrompt);
     }
 
     /**
@@ -229,24 +254,24 @@ export class Agent {
         });
     }
 
-    private assignPromptValues() {
-        this.prompt = this.handleActionList(this.prompt);
+    public assignPromptValues(prompt: string): string {
+        prompt = this.handleActionList(prompt);
 
-        for (const match of this.prompt.matchAll(/%([\w.]*)%/g)) {
+        for (const match of prompt.matchAll(/%([\w.]*)%/g)) {
             if (match[1] == "bot_name") {
-                this.prompt = this.prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
+                prompt = prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
             } else if (match[1].startsWith("internal")) {
-                this.prompt = this.prompt.replace(
+                prompt = prompt.replace(
                     match[0],
                     this.internal_prompts[match[1].split(".")[1]].toString() || "$&"
                 );
             }
         }
 
-        console.log(this.prompt);
+       return prompt;
     }
 
-    private handleActionList(prompt: string): string {
+    public handleActionList(prompt: string): string {
         // TODO: Jesus christ this is a mess
         // upd: still a mess imo but better than it was before
 

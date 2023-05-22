@@ -35,6 +35,7 @@ export const IgnoreTaskTypes: TaskType[] = [
 export class Context {
     public channel: TextBasedChannel;
     public agent: Agent;
+    public contextPrompt: string;
     public events: Set<ContextEvent>;
     public memories: ContextMemory;
     public ratelimited: boolean = false;
@@ -46,6 +47,7 @@ export class Context {
         this.channel = channel;
         this.events = new Set();
         this.memories = new ContextMemory(this);
+        this.contextPrompt = "";
 
         this.parse();
     }
@@ -229,7 +231,7 @@ export class Context {
 
         const prompts: Prompt[] = [{
             role: "system",
-            content: message.channel.type == ChannelType.DM ? this.agent.dm_prompt.replace("%user_name%", message.author.username) : this.agent.prompt
+            content: this.handlePromptValues(this.contextPrompt, message)
         }];
 
         this.events.forEach((event) => {
@@ -646,6 +648,23 @@ export class Context {
     }
 
     private parse() {
+        if (this.channel.isDMBased()) {
+            this.contextPrompt = this.agent.dm_prompt;
+        } else if (this.channel.isThread()) {
+            this.contextPrompt = this.agent.prompt;
+        } else {
+            this.contextPrompt = this.agent.prompt; // todo: add nsfw prompt
+        }
+
+        this.contextPrompt += `\n\n${this.agent.getCompletionPrompt(this.channel)}`;
+
+        console.log(this.contextPrompt)
+
+
         this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.context_memory_limit), "messages in the channel");
+    }
+
+    private handlePromptValues(prompt: string, message: Message): string {
+        return prompt.replace("%user_name", message.author.username);
     }
 }
