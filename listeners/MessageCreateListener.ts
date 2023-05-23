@@ -22,20 +22,29 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         const prefixes = await this.container.client.fetchPrefix(message);
         const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
         
-        if (prefix && prefix.length !== message.content.length) {
-            if (message.channel.isDMBased()) {
+        if (prefix && prefix.length !== message.content.length && !message.channel.isDMBased()) {
+            return this.container.client.emit(Events.CommandRun, message, prefix);
+        } else {
+            if (
+                // whitelisting dream
+                (this.config.whitelist.enabled && !this.config.whitelist.channels.includes(message.channel.id))
+            ) {
                 return;
             }
 
-            return this.container.client.emit(Events.CommandRun, message, prefix);
-        } else {
-            if ((message.channel.isDMBased() && !this.config.whitelist.users.includes(message.author.id))
-                || message.channel.isDMBased() && this.config.blacklist.users.includes(message.author.id)
-                || !message.channel.isDMBased() && !this.config.blacklist.blacklist_only_dms && this.config.blacklist.users.includes(message.author.id)) {
-                return;
-            }
-            if ((this.config.whitelist.enabled && !this.config.whitelist.users.includes(message.author.id))
-                || this.config.blacklist.channels.includes(message.channel.id)) {
+            if (
+                // blacklisting NIGHTMARE
+                this.config.blacklist.enabled
+                // blacklisting is a nightmare for these reasons:
+                // 1. users can be blacklisted purely from dming the bot as a setting
+                // 2. users can be blacklisted altogether
+                // 3. channels can also be blacklisted
+                && (
+                    (message.channel.isDMBased() || !this.config.blacklist.blacklist_only_dms)
+                    && this.config.blacklist.users.includes(message.author.id)
+                    || this.config.blacklist.channels.includes(message.channel.id)
+                )
+            ) {
                 return;
             }
 
@@ -51,27 +60,11 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         }
     }
 
+    /**
+     * Checks if the message can be processed
+     */
     private canProcessMessage(message: Message) {
-        // Message can be processed if:
-        // - the author is not a bot
-        // - the message has been created in a guild
-        // - the current channel is text-based and not DM-based
-        // - the bot has permissions to send messages and view the current channel 
-        // Optionally checks if the current channel is whitelisted if the whitelist is enabled.
-
-        if (message.channel.isDMBased()) {
-            return true;
-        }
-
-        return (
-            !message.author.bot
-            && message.channel.isTextBased()
-            && (
-                this.container.client.configuration.bot.whitelist.enabled
-                ? this.container.client.configuration.bot.whitelist.channels.includes(message.channel.id)
-                : true
-            )
-        );
+        return !message.author.bot && message.channel.isTextBased();
     }
 
     /**

@@ -4,6 +4,7 @@ import { Context, ContextEvent } from "../src/ai/Context";
 import Booru, { BooruClass } from "booru";
 import { Piece } from "@sapphire/pieces";
 import { Message } from "discord.js";
+import google from "googlethis";
 
 export class SearchWebInstruction extends Instruction {
     private booru: BooruClass;
@@ -45,6 +46,25 @@ export class SearchWebInstruction extends Instruction {
                     }
                 }
             };
+        } else if (event.parameters.type == "google") {
+            const images = await google.image(event.parameters.query, { safe: true });
+
+            return {
+                attempts: 0,
+                action: {
+                    type: TaskType.ActionResponse,
+                    parameters: {
+                        action: TaskType.SearchImages,
+                        response: {
+                            type: "google",
+                            results: images.map((post) => ({
+                                id: post.id,
+                                url: post.url,
+                            })).slice(0, typeof event.parameters.limit === "number" ? event.parameters.limit : 1)
+                        }
+                    }
+                }
+            }
         }
     }
 }

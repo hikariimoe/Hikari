@@ -9,6 +9,7 @@
         "removeComments": true,
         "noImplicitAny": true,
         "noFallthroughCasesInSwitch": true,
+        "skipLibCheck": true,
     },
     "include": [
         "src/**/*.ts",
@@ -19,8 +20,8 @@
         "commands/**/*.ts"
     ],
     "exclude": [
-        "dist",
-        "node_modules"
+        "dist/**/*",
+        "node_modules/**/*"
     ],
     "files": [
         "bot.ts",

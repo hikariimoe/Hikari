@@ -6,13 +6,13 @@ Once that's done, people can be assigned individually to each issue and the prog
 
 ## Configuration & Architecture
 - [x] supporting /aicg/ proxies that have keys to them (such as my own)
-- [ ] (unlikely) support using multiple proxies at once to circumvent ratelimits (this feels unethical ngl)
-- [ ] find a way to optimize prompts (potentially see https://github.com/microsoft/guidance & rewriting it into TS)
+- [\] (unlikely) support using multiple proxies at once to circumvent ratelimits (this feels unethical ngl)
+- [\] find a way to optimize prompts (potentially see https://github.com/microsoft/guidance & rewriting it into TS)
       (https://github.com/microsoft/DeepSpeed is also an interesting candidate but its largely for training) 
 
 ## Instructions
-- [/] make instructions configurable (so that they can be enabled or disabled on the fly)
-- [ ] searching google images (how has this not been added yet)
+- [x] make instructions configurable (so that they can be enabled or disabled on the fly)
+- [x] searching google images (how has this not been added yet)
 - [ ] properly viewing and visiting websites (currently implemented improperly) (should use sth like cheerio to purge any and all script tags)
 - [\] generate images via a stable diffusion model
 - [ ] potentially have the ability to read anime/manga lists
@@ -26,13 +26,13 @@ Once that's done, people can be assigned individually to each issue and the prog
     - [x] add the ability to change her status
 
 ## AI Modeling/Prompting
-- [ ] make a harsh and strictER PROMPT to force gpt-3.5 to act a certain way
+- [\] make a harsh and strictER PROMPT to force gpt-3.5 to act a certain way
 - [ ] harshly cleanup Context.ts & document it
 - [/] harshly cleanup Agent.ts & document it (it went from being really simple to being *not* very simple lmao)
 - [ ] getting the last few messages in the channel for remembering and preserving previous contexts
 - [\] move memory away from postgres and attach it to context (super unfortunate we removed it from the prompts for now)
-- [ ] add proper safety measures for sfw environments
-- [ ] add certain prompts and cues depending on the channel environment (such as whether a channel is nsfw or not)
+- [x] add proper safety measures for sfw environments
+- [x] add certain prompts and cues depending on the channel environment (such as whether a channel is nsfw or not)
       other cues include but are not limited to:
       * dm channels
       * channels in very small servers (should these be considered private?)

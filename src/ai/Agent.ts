@@ -284,6 +284,8 @@ export class Agent {
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
         //  ^^^^ this is repeated 3 times, maybe move to a separate function?
 
+        console.log(instructions)
+
         const responses = Object.entries(InstructionResponseData)
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
 
@@ -318,7 +320,7 @@ export class Agent {
                 /%discord_action_list%/g,
                 discordActions.length > 0
                     ? [
-                        "\n\n\n%internal.discord_action_list%",
+                        "\n\n%internal.discord_action_list%",
                         ...discordActions,
                     ].join("\n") : "\n"
             )
@@ -326,7 +328,7 @@ export class Agent {
                 /%action_response_list%/g,
                 instructions.length > 0 && responses.length > 0
                     ? [
-                        "\n\n\n%internal.action_response_list%",
+                        "\n\n%internal.action_response_list%",
                         ...responses,
                         "%internal.math_warning%",
                         "%internal.upload_image_warning%"

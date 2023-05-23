@@ -242,7 +242,7 @@ export class Context {
                             ? "assistant"
                             : "user"
                 ),
-                content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
+                content: JSON.stringify(Util.omit(event, ["attempts"])),
             });
         });
 
@@ -254,7 +254,7 @@ export class Context {
                         ? "assistant"
                         : "user"
             ),
-            content: JSON.stringify(Util.omit(event, ["attempts", "username"])),
+            content: JSON.stringify(Util.omit(event, ["attempts"])),
         });
 
         await message.channel.sendTyping();
@@ -397,8 +397,8 @@ export class Context {
 
         this.events.add(event);
 
-        if (this.events.size > this.agent.client.configuration.bot.context_memory_limit) {
-            const toRemove = this.events.size - this.agent.client.configuration.bot.context_memory_limit;
+        if (this.events.size > this.agent.client.configuration.bot.ai.context_memory_limit) {
+            const toRemove = this.events.size - this.agent.client.configuration.bot.ai.context_memory_limit;
 
             let removed = 0;
             for (const event of this.events.values()) {
@@ -657,8 +657,9 @@ export class Context {
 
         this.contextPrompt += `\n\n${this.agent.getCompletionPrompt(this.channel)}`;
 
+        console.log(this.contextPrompt);
 
-        this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.context_memory_limit), "messages in the channel");
+        this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.ai.context_memory_limit), "messages in the channel");
     }
 
     private handlePromptValues(prompt: string, message: Message): string {
