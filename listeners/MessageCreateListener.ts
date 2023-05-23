@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { Message } from "discord.js";
 import { HikariListener } from "../src/structures/HikariListener";
 import { Listener } from "@sapphire/framework";
 import { Events } from "../src/util/Events";
+import { Message } from "discord.js";
 
 export class MessageCreateListener extends HikariListener<typeof Events.MessageCreate> {
     private config = this.container.client.configuration.bot;
@@ -23,11 +23,13 @@ export class MessageCreateListener extends HikariListener<typeof Events.MessageC
         const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
         
         if (prefix && prefix.length !== message.content.length && !message.channel.isDMBased()) {
-            return this.container.client.emit(Events.CommandRun, message, prefix);
+            return this.container.client.emit(
+                Events.CommandRun, message, prefix
+            );
         } else {
             if (
                 // whitelisting dream
-                (this.config.whitelist.enabled && !this.config.whitelist.channels.includes(message.channel.id))
+                this.config.whitelist.enabled && !this.config.whitelist.channels.includes(message.channel.id)
             ) {
                 return;
             }
