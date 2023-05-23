@@ -1,12 +1,12 @@
 import { SapphireClient, SapphireClientOptions } from "@sapphire/framework";
 import { InstructionStore } from "./stores/InstructionStore";
 import { HikariTomlOptions } from "./util/Constants";
+import { SourceStore } from "./stores/SourceStore";
 import { getRootData } from "@sapphire/pieces";
 import { Logger } from "./util/Logger";
+import { Partials } from "discord.js";
 import { join as pjoin } from "path";
 import { Agent } from "./ai/Agent";
-import { Partials } from "discord.js";
-import { SourceStore } from "./stores/SourceStore";
 
 type SapphireOptionsWithIntents = SapphireClientOptions & {
     intents: number | number[]
@@ -54,6 +54,7 @@ export class Hikari extends SapphireClient {
 
         // Create the agent.
         this._agent = new Agent(this);
+        this._agent.loadPrompts();
         await this._agent.attemptSetProxy();
 
         return super.login(this.configuration.bot.token);

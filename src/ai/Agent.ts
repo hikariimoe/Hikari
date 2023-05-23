@@ -1,6 +1,7 @@
 import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
 import { Channel, TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
 import { Source } from "../structures/Source";
+import { encode } from "gpt-tokenizer";
 import { Configuration } from "openai";
 import { Context } from "./Context";
 import { load } from "cheerio";
@@ -9,6 +10,7 @@ import toml from "toml";
 import fs from "fs";
 
 import type { Hikari } from "../Hikari";
+import { Util } from "../util/Util";
 
 export enum ProxyType {
     Aicg
@@ -28,11 +30,15 @@ export class Agent {
     /** The assigned name of te bot */
     public name: string;
     /** The configured prompt to use for the AI. */
-    public prompt: string;
+    public prompt: string = "";
     /** The configured prompt to use for the AI. */
-    public dm_prompt: string;
+    public dm_prompt: string = "";
     /** All of the internal prompts used by the AI. */
-    public internal_prompts: Prompts;
+    public internal_prompts: Prompts = {
+        completion_prompt: [],
+        simple_completion_prompt: [],
+        image_curator_prompt: []
+    };
     /** The GPT model to use when creating completions.  */
     public model: string;
     /** Propogated events to the AI Agent from text channels. */
@@ -56,17 +62,6 @@ export class Agent {
         this.logger.debug("Agent: Initializing the agent...");
         this.logger.trace("Agent: Parsing prompts for the agent.");
 
-        this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
-        this.prompt = this.getBasePrompt("prompt");
-
-        if (this.client.configuration.bot.information.dm_prompt.length === 0) {
-            this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
-
-            this.dm_prompt = this.getBasePrompt("prompt");
-        } else {
-            this.dm_prompt = this.getBasePrompt("dm_prompt");
-        }
-
         if (!this.client.stores.get("sources").has(this.client.configuration.bot.ai.source)) {
             this.logger.fatal("Agent: The source provided in the configuration file does not exist.");
             this.logger.fatal("Agent: Please check your configuration file and try again.");
@@ -76,6 +71,39 @@ export class Agent {
         // eslint-disable @typescript-eslint/no-non-null-assertion
         this.source = this.client.stores.get("sources").get(this.client.configuration.bot.ai.source)!;
         this.openaiConfig = new Configuration();
+    }
+
+    public loadPrompts() {
+        this.internal_prompts = toml.parse(fs.readFileSync("./prompts.toml", "utf-8"));
+        this.prompt = this.assignPromptValues(this.getBasePrompt("prompt"), false);
+
+        if (this.client.configuration.bot.information.dm_prompt.length == 0) {
+            this.logger.warn("Agent: No DM prompt was provided, using the default prompt.");
+            this.dm_prompt = this.prompt;
+        } else {
+            this.dm_prompt = this.assignPromptValues(this.getBasePrompt("dm_prompt"), false);
+        }
+        
+        this.calculatePromptSize();
+    }
+    
+    private calculatePromptSize() {
+        this.logger.trace("Agent: Calculating tokens for the base prompt.");
+        const tokens = encode(this.prompt);
+        
+        this.logger.debug("Agent: Current size of the prompt is", this.logger.color.hex("#7dffbc")(tokens.length), "tokens.");
+        if (tokens.length > 200) {
+            this.logger.warn("Agent: The current prompt is over", this.logger.color.hex("#7dffbc")(200), "tokens long, and thus it may run into high costs.");
+        }
+        
+        if (this.dm_prompt != this.prompt) {
+            const dm_tokens = encode(this.prompt);
+
+            this.logger.debug("Agent: Current size of the DM prompt is", this.logger.color.hex("#7dffbc")(dm_tokens.length), "tokens.");
+            if (dm_tokens.length > 200) {
+                this.logger.warn("Agent: The current DM prompt is over", this.logger.color.hex("#7dffbc")(200), "tokens long, and thus it may run into high costs.");
+            }
+        }
     }
 
     get logger() {
@@ -255,21 +283,10 @@ export class Agent {
         });
     }
 
-    public assignPromptValues(prompt: string): string {
-        prompt = this.handleActionList(prompt);
-
-        for (const match of prompt.matchAll(/%([\w.]*)%/g)) {
-            if (match[1] === "bot_name") {
-                prompt = prompt.replace(match[0], this.client.configuration.bot.information.bot_name);
-            } else if (match[1].startsWith("internal")) {
-                prompt = prompt.replace(
-                    match[0],
-                    this.internal_prompts[match[1].split(".")[1]].toString() || "$&"
-                );
-            }
-        }
-
-        return prompt;
+    public assignPromptValues(prompt: string, includeActions: boolean = true): string {
+        return Util.handlePromptValues(
+            includeActions ? this.handleActionList(prompt) : prompt
+        );
     }
 
     public handleActionList(prompt: string): string {
@@ -284,8 +301,6 @@ export class Agent {
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
         //  ^^^^ this is repeated 3 times, maybe move to a separate function?
 
-        console.log(instructions)
-
         const responses = Object.entries(InstructionResponseData)
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
 
@@ -299,62 +314,52 @@ export class Agent {
             "search_images"
         ];
 
-        return prompt
-            .replace(
-                /%action_list%/g,
-                instructions.length > 0
-                    ? [
-                        "\n\n%internal.action_perform%",
-                        JSON.stringify({
-                            type: "action_name",
-                            parameters: {
-                                parameter_name: "parameter_value"
-                            }
-                        }),
-                        "\n",
-                        "%internal.action_list%",
-                        ...instructions,
-                    ].join("\n") : "\n"
-            )
-            .replace(
-                /%discord_action_list%/g,
-                discordActions.length > 0
-                    ? [
-                        "\n\n%internal.discord_action_list%",
-                        ...discordActions,
-                    ].join("\n") : "\n"
-            )
-            .replace(
-                /%action_response_list%/g,
-                instructions.length > 0 && responses.length > 0
-                    ? [
-                        "\n\n%internal.action_response_list%",
-                        ...responses,
-                        "%internal.math_warning%",
-                        "%internal.upload_image_warning%"
-                    ].join("\n") : "\n"
-            )
-            .replace(
-                /%json_format%/g,
-                JSON.stringify({
-                    username: "%bot_name%",
-                    text: "your response to the latest message",
-                    ...(
-                        instructions.length > 0 ? {
-                            action: "the action you want to perform (nullable)"
-                        } : {}
-                    )
-                })
-            )
-            .replace(
-                /%internal.upload_image_warning%/g,
+        return Util.replacePlaceholders(prompt, {
+            action_list: (
+                instructions.length > 0 ? [
+                    "\n\n%internal.action_perform%",
+                    JSON.stringify({
+                        type: "action_name",
+                        parameters: {
+                            parameter_name: "parameter_value"
+                        }
+                    }),
+                    "\n",
+                    "%internal.action_list%",
+                    ...instructions,
+                ].join("\n") : "\n"
+            ),
+            discord_action_list: (
+                discordActions.length > 0 ? [
+                    "\n\n%internal.discord_action_list%",
+                    ...discordActions,
+                ].join("\n") : "\n"
+            ),
+            action_response_list: (
+                instructions.length > 0 && responses.length > 0 ? [
+                    "\n\n%internal.action_response_list%",
+                    ...responses,
+                    "%internal.math_warning%",
+                    "%internal.upload_image_warning%"
+                ].join("\n") : "\n"
+            ),
+            "internal.upload_image_warning": (
                 instructions.filter(
                     (x) => imageInstructions.includes(
                         // eslint-disable @typescript-eslint/no-non-null-assertion
                         x.match(/"(.+?)"/)![1]
                     )
-                ).length > 0 ? "$&" : ""
-            )
-            .replace(/\n\s/g, "\n");
+                ).length > 0 ? undefined : ""
+            ),
+            json_format: JSON.stringify({
+                username: "%bot_name%",
+                text: "your response to the latest message",
+                ...(
+                    instructions.length > 0 ? {
+                        action: "the action you want to perform (nullable)"
+                    } : {}
+                )
+            }),
+        }).replace(/\n\s/g, "\n");
     }
 }

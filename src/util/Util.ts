@@ -1,6 +1,47 @@
+import { Channel, GuildBasedChannel, User } from "discord.js";
+import { container } from "@sapphire/framework";
 import { deepClone } from "@sapphire/utilities";
+import { Hikari } from "../Hikari";
+
+// mmmmememmemememmeme
+interface PrimativeMessage {
+    channel: Channel;
+    author?: User;
+}
 
 export class Util {
+    /// PROMPT UTILITIES
+    static handlePromptValues(prompt: string, message?: PrimativeMessage) {
+        const client = container.client as Hikari;
+        const { agent, configuration } = client;
+        
+        return this.replacePlaceholders(
+            prompt.replace(
+                /%internal.([\w\d.-]+)%/g,
+                (match, key) => agent.internal_prompts[key] as string ?? match
+            ), {
+                bot_name: agent.name,
+                bot_id: client.user?.id,
+                ...(
+                    message ? {
+                        user_name: message.author?.username,
+                        user_id: message.author?.id,
+                        channel_name: message.channel.isDMBased()
+                            ? `DM with ${message.author?.username}`
+                            : (message.channel as GuildBasedChannel).name,
+                    } : {}
+                )
+            }
+        )
+    }
+    
+    static replacePlaceholders(str: string, values: Record<string, string | undefined>): string {
+        return str.replace(
+            /%([\w\d.-])%/g,
+            (match, key) => values[key] ?? match
+        );
+    }
+
     static omit<T, K extends keyof T>(obj: T | undefined, keys: K[]): Omit<T, K> {
         if (!obj) {
             return {} as Omit<T, K>;

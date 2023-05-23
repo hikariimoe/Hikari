@@ -230,7 +230,7 @@ export class Context {
 
         const prompts: Prompt[] = [{
             role: "system",
-            content: this.handlePromptValues(this.contextPrompt, message)
+            content: Util.handlePromptValues(this.contextPrompt, message)
         }];
 
         this.events.forEach((event) => {
@@ -657,12 +657,14 @@ export class Context {
 
         this.contextPrompt += `\n\n${this.agent.getCompletionPrompt(this.channel)}`;
 
-        console.log(this.contextPrompt);
+        console.log(Util.handlePromptValues(this.contextPrompt, {
+            channel: this.channel
+        }));
 
         this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.ai.context_memory_limit), "messages in the channel");
     }
 
     private handlePromptValues(prompt: string, message: Message): string {
-        return prompt.replace("%user_name", message.author.username);
+        return prompt.replace(/%user_name%/g, message.author.username);
     }
 }

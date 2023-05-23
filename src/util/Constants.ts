@@ -9,6 +9,11 @@ export enum MinimalMode {
     Less = "less"
 }
 
+export enum CommonModelType {
+    GPT35 = "gpt-3.5-turbo",
+    GPT4 = "gpt-4",
+}
+
 /**
  * All of the available options for the Hikari client, assigned via TOML.
  */
@@ -31,12 +36,6 @@ export interface HikariTomlOptions {
          * Any intents that should be enabled for the bot.
          */
         intents: string[];
-
-        /**
-         * The amount of messages that should be cached.
-         * Upon a new message sent, if this limit is reached, the oldest message will be removed from the cache.
-         */
-        context_memory_limit: number;
 
         /**
          * Whether this bot should respond to direct messages.
@@ -116,7 +115,11 @@ export interface HikariTomlOptions {
         }
 
         ai: {
-
+        /**
+         * The amount of messages that should be cached.
+         * Upon a new message sent, if this limit is reached, the oldest message will be removed from the cache.
+         */
+        context_memory_limit: number;
             /**
              * The model to use when generating a response.
              * Models highly depends on what LLM source you're using. Make sure to check the documentation for the source you're using.

@@ -14,8 +14,11 @@ import { copyFileSync, existsSync } from "fs";
 
 // I don't either.
 void async function main () {
-    // Pre-initialize the bot.
-    preInit();
+    // Check if the config file exists, and if not; copy the example config.
+    // This is done to prevent the user from having to manually copy the example config.
+    if (!existsSync("./config.toml")) {
+        copyFileSync("./config.example.toml", "./config.toml");
+    }
 
     const config: HikariTomlOptions = toml.parse(
         await readFile("./config.toml", "utf-8")
@@ -30,11 +33,3 @@ void async function main () {
 
     await client.login();
 } ();
-
-function preInit() {
-    // Check if the config file exists, and if not; copy the example config.
-    // This is done to prevent the user from having to manually copy the example config.
-    if (!existsSync("./config.toml")) {
-        copyFileSync("./config.example.toml", "./config.toml");
-    }
-}

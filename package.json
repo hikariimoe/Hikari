@@ -26,17 +26,20 @@
     "cheerio": "^1.0.0-rc.12",
     "discord.js": "^14.11.0",
     "googlethis": "^1.7.1",
+    "gpt-tokenizer": "^1.0.5",
     "jsonrepair": "^3.1.0",
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.11",
     "openai": "^3.2.1",
     "prisma": "^4.14.0",
-    "toml": "^3.0.0"
+    "toml": "^3.0.0",
+    "unidecode": "^0.1.8"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.194",
     "@types/node": "^20.1.4",
     "@types/node-fetch": "^2.6.3",
+    "@types/unidecode": "^0.1.1",
     "@typescript-eslint/eslint-plugin": "^5.59.6",
     "eslint": "^8.40.0",
     "eslint-plugin-import": "^2.27.5",
