@@ -7,8 +7,8 @@ completion_prompt = [
     "%completion_channel%",
     "All messages in the channel are structured in a JSON format, and you are expected to respond in the same format.",
     "When you send a message, you must include your username at the beginning of the message.\n",
-    "%action_list%",
-    "%discord_action_list%",
+    "\n%action_list%\n",
+    "%discord_action_list%\n",
     "%action_response_list%",
     "\nYou MUST respond in the provided JSON format as entailed below:\n",
     "%json_format%"

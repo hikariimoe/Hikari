@@ -1,5 +1,5 @@
 import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
-import { Channel, TextBasedChannel, TextBasedChannelResolvable } from "discord.js";
+import { Channel, TextBasedChannel, TextBasedChannelResolvable, User } from "discord.js";
 import { Source } from "../structures/Source";
 import { encode } from "gpt-tokenizer";
 import { Configuration } from "openai";
@@ -22,6 +22,13 @@ export interface Prompts {
     simple_completion_prompt: string[];
     image_curator_prompt: string[];
 }
+
+interface PrimativeMessage {
+    channel: Channel;
+    author?: User;
+}
+
+const HARASS_FOR_TOKENS = 500;
 
 /**
  * An abstraction to work away everything related to AI functionality, and properly separate it from the rest of the code.
@@ -92,16 +99,16 @@ export class Agent {
         const tokens = encode(this.prompt);
         
         this.logger.debug("Agent: Current size of the prompt is", this.logger.color.hex("#7dffbc")(tokens.length), "tokens.");
-        if (tokens.length > 200) {
-            this.logger.warn("Agent: The current prompt is over", this.logger.color.hex("#7dffbc")(200), "tokens long, and thus it may run into high costs.");
+        if (tokens.length > HARASS_FOR_TOKENS) {
+            this.logger.warn("Agent: The current prompt is over", this.logger.color.hex("#7dffbc")(HARASS_FOR_TOKENS), "tokens long, and thus it may run into high costs.");
         }
         
         if (this.dm_prompt != this.prompt) {
             const dm_tokens = encode(this.prompt);
 
             this.logger.debug("Agent: Current size of the DM prompt is", this.logger.color.hex("#7dffbc")(dm_tokens.length), "tokens.");
-            if (dm_tokens.length > 200) {
-                this.logger.warn("Agent: The current DM prompt is over", this.logger.color.hex("#7dffbc")(200), "tokens long, and thus it may run into high costs.");
+            if (dm_tokens.length > HARASS_FOR_TOKENS) {
+                this.logger.warn("Agent: The current DM prompt is over", this.logger.color.hex("#7dffbc")(HARASS_FOR_TOKENS), "tokens long, and thus it may run into high costs.");
             }
         }
     }
@@ -283,9 +290,9 @@ export class Agent {
         });
     }
 
-    public assignPromptValues(prompt: string, includeActions: boolean = true): string {
+    public assignPromptValues(prompt: string, includeActions: boolean = true, message?: PrimativeMessage): string {
         return Util.handlePromptValues(
-            includeActions ? this.handleActionList(prompt) : prompt
+            includeActions ? this.handleActionList(prompt) : prompt, message
         );
     }
 

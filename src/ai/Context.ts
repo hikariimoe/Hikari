@@ -83,123 +83,6 @@ export class Context {
                 resolve("");
             }
         });
-
-        // return await new Promise(async (resolve, reject) => {
-        //     this.agent.logger.debug("Agent: Creating AI completion request for", this.agent.logger.color.hex("#7dffbc")(prompts.length), "prompts");
-        //     let completionStream: any;
-        //     try {
-        //         completionStream = (await this.agent.ai?.createChatCompletion({
-        //             model: model,
-        //             stream: true,
-        //             messages: prompts
-        //         }, {
-        //             responseType: "stream"
-        //         }))
-
-        //     } catch (e: any) {
-        //         if (e.response && e.response.status === 429) {
-        //             this.ratelimited = true;
-        //             const until = parseInt(e.response.headers["x-ratelimit-reset"]) - Date.now();
-
-        //             let rl: Message | undefined;
-        //             if (sendReply) {
-        //                 rl = await this.currentMessage?.reply(`I'm being rate limited, please wait ${until}ms for a response, or try again later (wont read any messages until then)`);
-        //             }
-
-        //             this.agent.logger.warn("Agent: Rate limited, waiting", this.agent.logger.color.hex("#7dffbc")(until), "ms");
-
-        //             setTimeout(async () => {
-        //                 this.ratelimited = false;
-
-        //                 await rl?.delete();
-        //                 resolve(await this.handleCompletion(prompts, sendReply ? false : sendReply, model));
-        //             }, until);
-        //         } else {
-        //             this.agent.logger.error("Agent: Error while creating completion request:", e);
-
-        //             if (e.response) {
-        //                 console.log(e.response)
-        //             }
-
-        //             reject(undefined);
-        //         }
-        //     }
-
-        //     let result = "";
-        //     let sentQueueMessage = false;
-        //     let queueMessage: Message | undefined; ``
-        //     // @ts-ignore
-        //     // don't think there's a type for this lol 
-        //     completionStream?.data.on("data", async (data: Buffer) => {
-        //         if (data.includes("queue")) {
-        //             // Well Fuck
-        //             if (sentQueueMessage == false && sendReply == true) {
-        //                 this.agent.logger.debug("Agent: Request has been enqueued, waiting for freedom before we can continue.");
-        //                 queueMessage = await this.currentMessage?.reply(`(enqueued request, please wait for a response~)`);
-        //                 sentQueueMessage = true;
-        //             }
-
-        //             return;
-        //         }
-
-        //         let values = data.toString().split("\n")
-        //             .filter((line) => line.trim() !== "");
-
-        //         for (let value of values) {
-        //             if (value.startsWith("data: ")) {
-        //                 value = value.replace("data: ", "");
-        //             }
-
-        //             // trim newlines
-        //             if (value === "[DONE]") {
-        //                 // @ts-ignore
-        //                 if (sentQueueMessage == true) {
-        //                     await queueMessage?.delete();
-        //                 }
-
-        //                 if (result.includes("upstream error")) {
-        //                     if (result.includes("server_error")) {
-        //                         this.agent.logger.error("Agent: The OpenAI API is currently experiencing major issues, so we can't continue.");
-        //                         this.agent.logger.error("Agent: Please try again later, or contact the developer if this issue persists.");
-
-        //                         await this.currentMessage?.delete();
-        //                     }
-
-        //                     reject(undefined);
-        //                     break;
-        //                 }
-
-        //                 this.agent.logger.trace("Agent: Request has been completed, returning result.");
-
-        //                 completionStream?.data.destroy();
-        //                 resolve(result);
-
-        //                 break;
-        //             }
-
-        //             let json;
-        //             try {
-        //                 json = JSON.parse(value);
-        //             } catch (e) {
-        //                 completionStream?.data.destroy();
-        //                 reject(result);
-
-        //                 break;
-        //             }
-
-        //             this.agent.logger.trace("Agent: Recieved completion data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json)));
-
-        //             if (json.choices) {
-        //                 json.choices.forEach((choice: any) => {
-        //                     if (choice.delta.content) {
-        //                         result += choice.delta.content;
-        //                     }
-        //                 });
-        //             }
-        //         }
-
-        //     })
-        // })
     }
 
     // TODO: Split this into multiple functions
@@ -230,7 +113,7 @@ export class Context {
 
         const prompts: Prompt[] = [{
             role: "system",
-            content: Util.handlePromptValues(this.contextPrompt, message)
+            content: this.contextPrompt,
         }];
 
         this.events.forEach((event) => {
@@ -657,9 +540,11 @@ export class Context {
 
         this.contextPrompt += `\n\n${this.agent.getCompletionPrompt(this.channel)}`;
 
-        console.log(Util.handlePromptValues(this.contextPrompt, {
+        this.contextPrompt = this.agent.assignPromptValues(this.contextPrompt, true, {
             channel: this.channel
-        }));
+        });
+
+        console.log(this.contextPrompt);
 
         this.agent.logger.trace("Agent: Parsing the last", this.agent.logger.color.hex("#7dffbc")(this.agent.client.configuration.bot.ai.context_memory_limit), "messages in the channel");
     }

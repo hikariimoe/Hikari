@@ -17,7 +17,7 @@ export class Util {
         
         return this.replacePlaceholders(
             prompt.replace(
-                /%internal.([\w\d.-]+)%/g,
+                /%internal.([\w\d.-]{1,})%/g,
                 (match, key) => agent.internal_prompts[key] as string ?? match
             ), {
                 bot_name: agent.name,
@@ -37,7 +37,7 @@ export class Util {
     
     static replacePlaceholders(str: string, values: Record<string, string | undefined>): string {
         return str.replace(
-            /%([\w\d.-])%/g,
+            /%([\w\d.-]{1,})%/g,
             (match, key) => values[key] ?? match
         );
     }
