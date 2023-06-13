@@ -1,14 +1,14 @@
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Action, ActionOptions } from "../src/structures/Action";
 import { WolframAlphaProvider } from "../providers/WolframAlphaProvider";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { ContextEvent } from "../src/ai/Context";
 import { Piece } from "@sapphire/pieces";
 import { Message } from "discord.js";
 
-export class SearchWolframAlphaInstruction extends Instruction {
+export class SearchWolframAlphaAction extends Action {
     private wolfram: WolframAlphaProvider;
 
-    constructor(context: Piece.Context, options: InstructionOptions) {
+    constructor(context: Piece.Context, options: ActionOptions) {
         super(context, {
             ...options,
             taskType: TaskType.SearchWolframAlpha

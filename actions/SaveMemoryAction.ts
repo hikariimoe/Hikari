@@ -1,4 +1,4 @@
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Action, ActionOptions } from "../src/structures/Action";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Context, ContextEvent } from "../src/ai/Context";
 import { PrismaClient } from "@prisma/client";
@@ -7,8 +7,8 @@ import { Message } from "discord.js";
 
 const prisma = new PrismaClient();
 
-export class SaveMemoryInstruction extends Instruction {
-    constructor(context: Piece.Context, options: InstructionOptions) {
+export class SaveMemoryAction extends Action {
+    constructor(context: Piece.Context, options: ActionOptions) {
         super(context, {
             ...options,
             taskType: TaskType.SaveMemory

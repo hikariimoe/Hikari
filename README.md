@@ -32,6 +32,7 @@ And besides, wouldn't you like to have such a unique friend?
 * Elaborate access and jurisdiction to capably moderate a server, or an environment;
 * Comprehensive detail on what it's doing, and what it's thinking;
 * The ability to search for images, videos, and other media;
+* Integration with multiple services that can be easily configured and used;
 
 ## Contributions
 

@@ -10,11 +10,12 @@
         "noImplicitAny": true,
         "noFallthroughCasesInSwitch": true,
         "skipLibCheck": true,
+        "experimentalDecorators": true
     },
     "include": [
         "src/**/*.ts",
         "listeners/**/*.ts",
-        "instructions/**/*.ts",
+        "actions/**/*.ts",
         "providers/**/*.ts",
         "sources/**/*.ts",
         "commands/**/*.ts"

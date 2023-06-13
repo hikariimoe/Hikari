@@ -3,11 +3,11 @@ import { Context, ContextEvent } from "../ai/Context";
 import { Task, TaskType } from "./ai/Task";
 import { Message } from "discord.js";
 
-export interface InstructionOptions extends Piece.Options {
+export interface ActionOptions extends Piece.Options {
     readonly taskType?: TaskType;
 }
 
-export abstract class Instruction<O extends InstructionOptions = InstructionOptions> extends Piece<O> {
+export abstract class Action<O extends ActionOptions = ActionOptions> extends Piece<O> {
     public taskType: TaskType;
     constructor(context: PieceContext, options: O = {} as O) {
         super(context, options);

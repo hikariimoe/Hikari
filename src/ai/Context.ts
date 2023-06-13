@@ -312,34 +312,34 @@ export class Context {
 
         if (json.action) {
             if (IgnoreTaskTypes.includes(json.action.type)) {
-                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it, but it was ignored.");
+                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an action attached to it, but it was ignored.");
             } else {
-                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an instruction attached to it");
-                this.agent.logger.debug("Agent: Instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
-                this.agent.logger.trace("Agent: Attempting to find a proper instruction handler to read them all.");
+                this.agent.logger.debug("Agent: Response to message", this.agent.logger.color.hex("#7dffbc")(message.id), "had an action attached to it");
+                this.agent.logger.debug("Agent: Action data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
+                this.agent.logger.trace("Agent: Attempting to find a proper action handler to read them all.");
 
-                const instructionHandler = this.agent.client.stores.get("instructions").find(x => x.taskType === json.action.type);
+                const actionHandler = this.agent.client.stores.get("actions").find(x => x.taskType === json.action.type);
 
-                if (instructionHandler) {
+                if (actionHandler) {
 
-                    this.agent.logger.trace("Agent: Proper instruction handler found.");
-                    const postEvent = await instructionHandler.handle(message, json.action as Task, this);
+                    this.agent.logger.trace("Agent: Proper action handler found.");
+                    const postEvent = await actionHandler.handle(message, json.action as Task, this);
 
                     if (postEvent) {
-                        this.agent.logger.debug("Agent: Instruction handler created a post event, so we're handling it now.");
-                        this.agent.logger.debug("Agent: Instruction response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
+                        this.agent.logger.debug("Agent: Action handler created a post event, so we're handling it now.");
+                        this.agent.logger.debug("Agent: Action response data: ", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(postEvent)));
 
                         postEvent.attempts = 1;
                         this.handling = false;
 
                         return await this.handle(message, postEvent);
                     } else {
-                        this.agent.logger.debug("Agent: Instruction handler returned no data, so continuing on normally.");
+                        this.agent.logger.debug("Agent: Action handler returned no data, so continuing on normally.");
                     }
                 } else {
                     // Invalid action.
-                    this.agent.logger.warn("Agent: An instruction was provided by the AI, but there is no instruction handler that supports it!");
-                    this.agent.logger.warn("Agent: instruction data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
+                    this.agent.logger.warn("Agent: An action was provided by the AI, but there is no action handler that supports it!");
+                    this.agent.logger.warn("Agent: action data:", this.agent.logger.color.hex("#ff7de3")(JSON.stringify(json.action)));
 
                     json.action = null;
                 }

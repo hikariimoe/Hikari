@@ -2,6 +2,7 @@ import { Channel, GuildBasedChannel, User } from "discord.js";
 import { container } from "@sapphire/framework";
 import { deepClone } from "@sapphire/utilities";
 import { Hikari } from "../Hikari";
+import { AsyncEventFunction, EventFunction } from "../structures/decorators/Event";
 
 // mmmmememmemememmeme
 interface PrimativeMessage {
@@ -33,6 +34,22 @@ export class Util {
                 )
             }
         )
+    }
+
+    static isEventFunction(func: any): func is EventFunction {
+        if (typeof func !== "function") {
+            return false;
+        }
+
+        return func.event !== undefined;
+    }
+
+    static isAsyncEventFunction(func: any): func is AsyncEventFunction {
+        if (typeof func !== "function") {
+            return false;
+        }
+        
+        return func.event !== undefined;
     }
     
     static replacePlaceholders(str: string, values: Record<string, string | undefined>): string {

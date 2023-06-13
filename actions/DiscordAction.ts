@@ -1,16 +1,16 @@
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Action, ActionOptions } from "../src/structures/Action";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Context, ContextEvent } from "../src/ai/Context";
 import { Piece } from "@sapphire/pieces";
 import { Message } from "discord.js";
 
-enum DiscordAction {
+enum DiscordActions {
     DeleteMessage = "delete_message",
     ChangeStatus = "change_status"
 }
 
-export class SaveMemoryInstruction extends Instruction {
-    constructor(context: Piece.Context, options: InstructionOptions) {
+export class DiscordAction extends Action {
+    constructor(context: Piece.Context, options: ActionOptions) {
         super(context, {
             ...options,
             taskType: TaskType.DiscordAction
@@ -19,10 +19,10 @@ export class SaveMemoryInstruction extends Instruction {
 
     async handle(trigger: Message, event: Task, context: Context): Promise<ContextEvent | undefined> {
         switch (event.parameters.action) {
-            case DiscordAction.DeleteMessage:
+            case DiscordActions.DeleteMessage:
                 return await this.deleteMessage(trigger, event, context);
 
-            case DiscordAction.ChangeStatus:
+            case DiscordActions.ChangeStatus:
                 return await this.changeStatus(trigger, event, context);
         }
     }

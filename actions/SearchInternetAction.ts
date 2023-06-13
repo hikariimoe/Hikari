@@ -1,4 +1,4 @@
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Action, ActionOptions } from "../src/structures/Action";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { ContextEvent } from "../src/ai/Context";
 import { Piece } from "@sapphire/pieces";
@@ -6,8 +6,8 @@ import { Util } from "../src/util/Util";
 import { Message } from "discord.js";
 import google from "googlethis";
 
-export class SearchWebInstruction extends Instruction {
-    constructor(context: Piece.Context, options: InstructionOptions) {
+export class SearchInternetAction extends Action {
+    constructor(context: Piece.Context, options: ActionOptions) {
         super(context, {
             ...options,
             taskType: TaskType.SearchWeb

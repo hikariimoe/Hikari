@@ -88,13 +88,25 @@ export class OpenAISource extends Source {
                         // check if we've sent the queue message, and delete it if it exists
                         if (result.includes("upstream error")) {
                             await queueMessage?.delete();
+                            const json = JSON.parse(result);
                             
-                            if (result.includes("server_error")) {
+                            if (json.id.includes("server_error")) {
                                 this.logger.error("The OpenAI API is currently experiencing major issues, so we can't continue.");
                                 this.logger.error("Please try again later, or contact the developer if this issue persists.");
 
+
                                 return reject(new SourceError(SourceErrorType.InternalError, {
                                     message: "The OpenAI API is currently experiencing major issues, so we can't continue."
+                                }));
+                            } else if (json.id.includes("upstream error")) {
+                                const error = json.choices[0].delta.content[0].split("):")[1];
+                                const errorJson = JSON.parse(error);
+
+                                this.logger.error("The OpenAI API returned an upstream error:", errorJson);
+
+                                return reject(new SourceError(SourceErrorType.InternalError, {
+                                    message: errorJson.error.message,
+                                    data: errorJson.error
                                 }));
                             }
 

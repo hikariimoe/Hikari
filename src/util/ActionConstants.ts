@@ -1,4 +1,4 @@
-export const InstructionData = {
+export const ActionData = {
     "search_internet": {
         parameters: {
             query: "your search query"
@@ -21,8 +21,7 @@ export const InstructionData = {
 
     "view_website": {
         parameters: {
-            query: "your query",
-            website: "website to visit"
+            url: "website to visit"
         }
     },
 
@@ -58,7 +57,7 @@ export const InstructionData = {
     # The above doesn't work due the the AI's negligence during testing in GPT-3.5-turbo. Maybe it works better in GPT-4 but we won't be testing that for now
     */
 
-export const DiscordInstructionData = {
+export const DiscordActionData = {
     "delete_message": "deletes a message, requires the id of the message you want to delete",
     "change_status": "changes the playing status you're showing on discord, and requires the status you want to change to as the value"
 };
@@ -68,7 +67,7 @@ export const DiscordInstructionData = {
     "\"change_status\" - changes the playing status you're showing on discord, and requires the status you want to change to as the value",
     */
 
-export const InstructionResponseData = {
+export const ActionResponseData = {
     "upload_image": {
         parameters: {
             query: "a text describing the image(s) that were just uploaded"

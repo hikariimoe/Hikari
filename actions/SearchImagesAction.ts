@@ -1,4 +1,4 @@
-import { Instruction, InstructionOptions } from "../src/structures/Instruction";
+import { Action, ActionOptions } from "../src/structures/Action";
 import { Task, TaskType } from "../src/structures/ai/Task";
 import { Context, ContextEvent } from "../src/ai/Context";
 import Booru, { BooruClass } from "booru";
@@ -6,9 +6,9 @@ import { Piece } from "@sapphire/pieces";
 import { Message } from "discord.js";
 import google from "googlethis";
 
-export class SearchWebInstruction extends Instruction {
+export class SearchImagesAction extends Action {
     private booru: BooruClass;
-    constructor(context: Piece.Context, options: InstructionOptions) {
+    constructor(context: Piece.Context, options: ActionOptions) {
         super(context, {
             ...options,
             taskType: TaskType.SearchImages

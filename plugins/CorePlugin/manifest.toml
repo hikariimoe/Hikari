@@ -1,0 +1,11 @@
+name = "core"
+authors = [
+    "Irisu"
+]
+version = "0.10.1"
+
+[meta]
+description = "A library"
+
+[meta.logger]
+name = "CorePlugin"

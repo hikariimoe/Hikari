@@ -1,4 +1,4 @@
-import { DiscordInstructionData, InstructionData, InstructionResponseData } from "../util/InstructionConstants";
+import { DiscordActionData, ActionData, ActionResponseData } from "../util/ActionConstants";
 import { Channel, TextBasedChannel, TextBasedChannelResolvable, User } from "discord.js";
 import { Source } from "../structures/Source";
 import { encode } from "gpt-tokenizer";
@@ -303,27 +303,27 @@ export class Agent {
         const allowedDiscordActions = this.client.configuration.bot.ai.discord_actions;
         const allowedActions = this.client.configuration.bot.ai.actions;
 
-        const instructions = Object.entries(InstructionData)
+        const actions = Object.entries(ActionData)
             .filter(([key]) => allowedActions.includes(key))
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
         //  ^^^^ this is repeated 3 times, maybe move to a separate function?
 
-        const responses = Object.entries(InstructionResponseData)
+        const responses = Object.entries(ActionResponseData)
             .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`);
 
         const discordActions = allowedActions.includes("discord_action")
-            ? Object.entries(DiscordInstructionData)
+            ? Object.entries(DiscordActionData)
                 .filter(([key]) => allowedDiscordActions.includes(key))
                 .map(([key, data]) => `"${key}" - ${JSON.stringify(data)}`)
             : [];
 
-        const imageInstructions = [
+        const imageActions = [
             "search_images"
         ];
 
         return Util.replacePlaceholders(prompt, {
             action_list: (
-                instructions.length > 0 ? [
+                actions.length > 0 ? [
                     "\n\n%internal.action_perform%",
                     JSON.stringify({
                         type: "action_name",
@@ -333,7 +333,7 @@ export class Agent {
                     }),
                     "\n",
                     "%internal.action_list%",
-                    ...instructions,
+                    ...actions,
                 ].join("\n") : "\n"
             ),
             discord_action_list: (
@@ -343,7 +343,7 @@ export class Agent {
                 ].join("\n") : "\n"
             ),
             action_response_list: (
-                instructions.length > 0 && responses.length > 0 ? [
+                actions.length > 0 && responses.length > 0 ? [
                     "\n\n%internal.action_response_list%",
                     ...responses,
                     "%internal.math_warning%",
@@ -351,8 +351,8 @@ export class Agent {
                 ].join("\n") : "\n"
             ),
             "internal.upload_image_warning": (
-                instructions.filter(
-                    (x) => imageInstructions.includes(
+                actions.filter(
+                    (x) => imageActions.includes(
                         // eslint-disable @typescript-eslint/no-non-null-assertion
                         x.match(/"(.+?)"/)![1]
                     )
@@ -362,7 +362,7 @@ export class Agent {
                 username: "%bot_name%",
                 text: "your response to the latest message",
                 ...(
-                    instructions.length > 0 ? {
+                    actions.length > 0 ? {
                         action: "the action you want to perform (nullable)"
                     } : {}
                 )

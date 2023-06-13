@@ -1,5 +1,5 @@
 import { SapphireClient, SapphireClientOptions } from "@sapphire/framework";
-import { InstructionStore } from "./stores/InstructionStore";
+import { ActionStore } from "./stores/ActionStore";
 import { HikariTomlOptions } from "./util/Constants";
 import { SourceStore } from "./stores/SourceStore";
 import { getRootData } from "@sapphire/pieces";
@@ -7,6 +7,7 @@ import { Logger } from "./util/Logger";
 import { Partials } from "discord.js";
 import { join as pjoin } from "path";
 import { Agent } from "./ai/Agent";
+import { PluginStore } from "./stores/PluginStore";
 
 type SapphireOptionsWithIntents = SapphireClientOptions & {
     intents: number | number[]
@@ -15,7 +16,7 @@ type SapphireOptionsWithIntents = SapphireClientOptions & {
 export class Hikari extends SapphireClient {
     private rootData = getRootData();
     private _agent?: Agent;
-    
+
     public configuration: HikariTomlOptions;
     public logger: Logger;
 
@@ -31,12 +32,17 @@ export class Hikari extends SapphireClient {
         });
 
         this.stores.register(
-            new InstructionStore()
-                .registerPath(pjoin(this.rootData.root, "instructions"))
+            new ActionStore()
+                .registerPath(pjoin(this.rootData.root, "actions"))
         );
         this.stores.register(
             new SourceStore()
                 .registerPath(pjoin(this.rootData.root, "sources"))
+        );
+
+        this.stores.register(
+            new PluginStore()
+                .registerPath(pjoin(this.rootData.root, "plugins"))
         );
 
         this.configuration = configuration;
@@ -50,7 +56,7 @@ export class Hikari extends SapphireClient {
 
     async login(_?: string) {
         await this.stores.get("sources").loadAll();
-        await this.stores.get("instructions").loadAll();
+        await this.stores.get("actions").loadAll();
 
         // Create the agent.
         this._agent = new Agent(this);
