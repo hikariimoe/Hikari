@@ -1,11 +1,14 @@
-import { PluginStore } from "../src/stores/PluginStore";
-import { ActionStore } from "../src/stores/ActionStore";
-import { SourceStore } from "../src/stores/SourceStore";
+import type { Ayame } from "../src/Ayame";
+import type { SourceStore } from "../src/stores/SourceStore";
+import type { ActionStore } from "../src/stores/ActionStore";
 
 declare module "@sapphire/pieces" {
+    interface Container {
+        declare override client: Ayame;
+    }
+
     interface StoreRegistryEntries {
-        plugins: PluginStore;
-        actions: ActionStore;
         sources: SourceStore;
+        actions: ActionStore;
     }
 }

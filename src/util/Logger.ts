@@ -1,7 +1,7 @@
 import { Logger as BuiltinLogger, LogLevel } from "@sapphire/framework";
 import chalk from "chalk";
 
-import type { Hikari } from "../Hikari";
+import type { Ayame } from "../Ayame";
 
 export const LoggerColors = {
     trace: "#d6d6d6",
@@ -26,7 +26,7 @@ export class Logger extends BuiltinLogger {
     public readonly formats: Map<LogLevel, string>;
     public options: LoggerOptions;
 
-    public constructor(client: Hikari, loggerOptions: LoggerOptions = {}) {
+    public constructor(client: Ayame, loggerOptions: LoggerOptions = {}) {
         super(client.options.logger?.level ?? LogLevel.Info);
 
         this.options = loggerOptions;
@@ -34,7 +34,7 @@ export class Logger extends BuiltinLogger {
     }
 
     write(level: LogLevel, ...values: readonly unknown[]): void {
-        // if (this.level <= level) {
+        // if (level >= this.level) {
             console.log(this.preprocess(
                 this.formats.get(level) ?? this.formats.get(this.level) ?? "",
                 values

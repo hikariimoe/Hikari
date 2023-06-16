@@ -1,5 +1,6 @@
 dist/
+node_modules/
+.vscode/
+
 config.toml
 .env
-schema.prisma
-node_modules

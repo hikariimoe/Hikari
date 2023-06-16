@@ -1,5 +1,16 @@
 import { LogLevel } from "@sapphire/framework";
 
+export const Colors = {
+    General: 0xD14385,
+    GeneralLight: 0xE04A90,
+    GeneralDark: 0x9E2E62,
+
+    // Results
+    Success: 0x4AE05E,
+    Failure: 0xE04A4A,
+    Warning: 0xE09f4A
+};
+
 export enum SourceType {
     OpenAI = "openai",
 }
@@ -15,9 +26,9 @@ export enum CommonModelType {
 }
 
 /**
- * All of the available options for the Hikari client, assigned via TOML.
+ * All of the available options for the Ayame client, assigned via TOML.
  */
-export interface HikariTomlOptions {
+export interface AyameTomlOptions {
     /**
      * Configuration tailored specifically towards the discord bot.
      */
@@ -115,11 +126,12 @@ export interface HikariTomlOptions {
         }
 
         ai: {
-        /**
-         * The amount of messages that should be cached.
-         * Upon a new message sent, if this limit is reached, the oldest message will be removed from the cache.
-         */
-        context_memory_limit: number;
+            /**
+             * The amount of messages that should be cached.
+             * Upon a new message sent, if this limit is reached, the oldest message will be removed from the cache.
+             */
+            context_memory_limit: number;
+
             /**
              * The model to use when generating a response.
              * Models highly depends on what LLM source you're using. Make sure to check the documentation for the source you're using.
@@ -133,8 +145,9 @@ export interface HikariTomlOptions {
              */
             source: SourceType;
 
-            actions: string[];
-            discord_actions: string[];
+            enabled_actions: string[]
+            enabled_discord_actions: string[]
+
             minimal: boolean;
             minimal_mode: MinimalMode;
         }

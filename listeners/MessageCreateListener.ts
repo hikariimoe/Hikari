@@ -1,64 +1,59 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
-import { HikariListener } from "../src/structures/HikariListener";
 import { Listener } from "@sapphire/framework";
-import { Events } from "../src/util/Events";
 import { Message } from "discord.js";
+import { Events } from "../src/util/Events";
+import { Ayame } from "../src/Ayame"
+import { AyameTomlOptions } from "../src/util/Constants";
 
-export class MessageCreateListener extends HikariListener<typeof Events.MessageCreate> {
-    private config = this.container.client.configuration.bot;
+export class MessageCreateListener extends Listener<typeof Events.MessageCreate> {
+    declare public client: Ayame;
+    
+    private config: AyameTomlOptions["bot"];
+    
     public constructor(context: Listener.Context, options: Listener.Options) {
         super(context, {
             ...options,
             event: Events.MessageCreate
         });
+
+        this.client = this.container.client as Ayame;
+        this.config = this.client.config.bot;
     }
 
     public async run(message: Message) {
         if (!this.canProcessMessage(message)) {
             return;
         }
-    
+
         const prefixes = await this.container.client.fetchPrefix(message);
         const prefix = this.checkMentionPrefix(message) ?? this.checkPrefix(message, prefixes);
-        
+
         if (prefix && prefix.length !== message.content.length && !message.channel.isDMBased()) {
-            return this.container.client.emit(
-                Events.CommandRun, message, prefix
-            );
-        } else {
-            if (
-                // whitelisting dream
-                this.config.whitelist.enabled && !this.config.whitelist.channels.includes(message.channel.id)
-            ) {
-                return;
-            }
+            return this.container.client.emit(Events.CommandRun, message, prefix);
+        }
 
-            if (
-                // blacklisting NIGHTMARE
-                this.config.blacklist.enabled
-                // blacklisting is a nightmare for these reasons:
-                // 1. users can be blacklisted purely from dming the bot as a setting
-                // 2. users can be blacklisted altogether
-                // 3. channels can also be blacklisted
-                && (
-                    (message.channel.isDMBased() || !this.config.blacklist.blacklist_only_dms)
-                    && this.config.blacklist.users.includes(message.author.id)
-                    || this.config.blacklist.channels.includes(message.channel.id)
-                )
-            ) {
-                return;
-            }
+        // whitelisting dream
+        if (this.config.whitelist.enabled && !this.config.whitelist.channels.includes(message.channel.id)) {
+            return;
+        }
 
-            // idk if any of the above works
+        // blacklisting NIGHTMARE
+        // blacklisting is a nightmare for these reasons:
+        // 1. users can be blacklisted purely from dming the bot as a setting
+        // 2. users can be blacklisted altogether
+        // 3. channels can also be blacklisted
+        if (this.config.blacklist.enabled && (
+            (message.channel.isDMBased() || !this.config.blacklist.blacklist_only_dms)
+            && this.config.blacklist.users.includes(message.author.id)
+            || this.config.blacklist.channels.includes(message.channel.id)
+        )) {
+            return;
+        }
 
-            const ctx = await this.container.client.agent.context(message.channel);
-
-            try {
-                await ctx?.handle(message);
-            } catch (e) {
-                console.log(e);
-            }
+        try {
+            const ctx = this.client.contexts.get(message.channel);
+            await ctx?.handle(message);
+        } catch (e:any) {
+            console.error(e);
         }
     }
 

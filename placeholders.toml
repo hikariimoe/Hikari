@@ -1,0 +1,13 @@
+# These are public prompts and variables that users can set and be used in the
+# prompt. YOu can assign new ones here, or override default internal prompts to
+# get your desired results.
+
+# These variables are accessed in the main prompt assigned in the config via.
+# %name%. So if you set a variable called $foo, you can access it via %foo% in
+
+example_var = "example"
+example_var2 = [
+    "example",
+    "example2",
+    "example3"
+]
